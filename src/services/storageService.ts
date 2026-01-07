@@ -13,7 +13,7 @@ export const initDatabase = async (): Promise<void> => {
     return;
   }
   try {
-    const SQLite = require('expo-sqlite');
+    const SQLite = await import('expo-sqlite');
     db = await SQLite.openDatabaseAsync('fortune_calendar.db');
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS fortune_history (

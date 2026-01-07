@@ -1,4 +1,4 @@
-// Fortune Calendar 占い結果画面 v1.5
+// Fortune Calendar 占い結果画面 v1.6 (月運・年運タブ追加)
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
@@ -11,6 +11,7 @@ import { displayDateWithDay, parseDate, addDays, formatDate, today } from '../ut
 import { starsDisplay } from '../utils/fortuneUtils';
 import { MyCharacter } from '../components/MyCharacter';
 import { generateDailyAdvice, extractTypeKey } from '../data/adviceParts';
+import { PeriodTabs, FortunePeriod } from '../components/common/PeriodTabs';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -18,6 +19,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export const FortuneScreen: React.FC = () => {
   const { selectedFortune, setSelectedFortune, selectedDate, setSelectedDate, userConfig, fortuneCache, setFortuneResult } = useAppStore();
   const [result, setResult] = useState<FortuneResult | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<FortunePeriod>('daily');
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
   const currentFortune = enabledFortunes.includes(selectedFortune) ? selectedFortune : enabledFortunes[0];
@@ -94,10 +96,6 @@ export const FortuneScreen: React.FC = () => {
 
   return (
     <Animated.View style={[s.container, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
-      {/* スワイプヒント */}
-      <View style={s.swipeHint}>
-        <Text style={s.swipeHintText}>← 左右スワイプで日付移動 →</Text>
-      </View>
       <ScrollView contentContainerStyle={s.content}>
         {/* 日付ナビ */}
         <View style={s.dateNav}>
@@ -113,7 +111,7 @@ export const FortuneScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
         {plugins.length > 1 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabs}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsContainer}>
             {plugins.map((p) => (
               <TouchableOpacity key={p.id} style={[s.tab, currentFortune === p.id && s.tabActive]} onPress={() => setSelectedFortune(p.id)}>
                 <Text style={[s.tabText, currentFortune === p.id && s.tabTextActive]}>{p.name}</Text>
@@ -124,32 +122,54 @@ export const FortuneScreen: React.FC = () => {
           <Text style={s.fortuneName}>{plugins[0]?.name || '動物占い'}</Text>
         )}
 
-        {/* チャート */}
-        <View style={s.chartWrap}>
-          <HexChart scores={result.scores} size={220} />
-        </View>
+        {/* 期間タブ（日運/月運/年運） */}
+        <PeriodTabs
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+          disabled={currentFortune === 'omikuji'}
+        />
 
-        {/* キャラクター・総合運 */}
-        <View style={s.totalWrap}>
-          <MyCharacter size={100} showName />
-          <Text style={s.totalLabel}>総合運</Text>
-          <Text style={s.totalScore}>{result.scores.total}点</Text>
-          <Text style={s.totalStars}>{starsDisplay(result.scores.total)}</Text>
-          <Text style={s.totalDetail}>{result.details.total}</Text>
-        </View>
+        {/* 月運・年運は準備中 */}
+        {selectedPeriod !== 'daily' && (
+          <View style={s.comingSoon}>
+            <Text style={s.comingSoonText}>
+              {selectedPeriod === 'monthly' ? '月運' : '年運'}は準備中です
+            </Text>
+            <Text style={s.comingSoonSub}>Phase A2-A3で実装予定</Text>
+          </View>
+        )}
 
-        {/* 今日のアドバイス */}
-        <View style={s.adviceWrap}>
-          <Text style={s.adviceLabel}>今日のアドバイス</Text>
-          <Text style={s.adviceText}>{dailyAdvice}</Text>
-        </View>
+        {/* 日運コンテンツ */}
+        {selectedPeriod === 'daily' && (
+          <>
+            {/* チャート */}
+            <View style={s.chartWrap}>
+              <HexChart scores={result.scores} size={220} />
+            </View>
 
-        {/* ラッキー情報 */}
-        <LuckyInfo lucky={result.lucky} />
+            {/* キャラクター・総合運 */}
+            <View style={s.totalWrap}>
+              <MyCharacter size={100} showName />
+              <Text style={s.totalLabel}>総合運</Text>
+              <Text style={s.totalScore}>{result.scores.total}点</Text>
+              <Text style={s.totalStars}>{starsDisplay(result.scores.total)}</Text>
+              <Text style={s.totalDetail}>{result.details.total}</Text>
+            </View>
 
-        {/* 詳細 */}
-        <Text style={s.sectionTitle}>詳細</Text>
-        <FortuneDetailCards scores={result.scores} details={result.details} />
+            {/* 今日のアドバイス */}
+            <View style={s.adviceWrap}>
+              <Text style={s.adviceLabel}>今日のアドバイス</Text>
+              <Text style={s.adviceText}>{dailyAdvice}</Text>
+            </View>
+
+            {/* ラッキー情報 */}
+            <LuckyInfo lucky={result.lucky} />
+
+            {/* 詳細 */}
+            <Text style={s.sectionTitle}>詳細</Text>
+            <FortuneDetailCards scores={result.scores} details={result.details} />
+          </>
+        )}
       </ScrollView>
     </Animated.View>
   );
@@ -157,8 +177,6 @@ export const FortuneScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f8f8' },
-  swipeHint: { backgroundColor: '#FFE4EC', paddingVertical: 4, alignItems: 'center' },
-  swipeHintText: { fontSize: 11, color: '#FF69B4' },
   content: { padding: 16 },
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   navBtn: { padding: 12 },
@@ -177,11 +195,14 @@ const s = StyleSheet.create({
   adviceLabel: { fontSize: 12, color: '#FF69B4', fontWeight: 'bold', marginBottom: 8 },
   adviceText: { fontSize: 14, color: '#333', lineHeight: 22 },
   sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
-  tabs: { flexDirection: 'row', marginTop: 8 },
+  tabsContainer: { flexDirection: 'row', justifyContent: 'center', flexGrow: 1, marginTop: 8 },
   tab: { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderRadius: 16, backgroundColor: '#eee' },
   tabActive: { backgroundColor: '#FF69B4' },
   tabText: { fontSize: 14, color: '#666' },
   tabTextActive: { color: '#fff', fontWeight: 'bold' },
+  comingSoon: { backgroundColor: '#fff', borderRadius: 12, padding: 32, alignItems: 'center', marginVertical: 24 },
+  comingSoonText: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4', marginBottom: 8 },
+  comingSoonSub: { fontSize: 12, color: '#999' },
 });
 
 export default FortuneScreen;

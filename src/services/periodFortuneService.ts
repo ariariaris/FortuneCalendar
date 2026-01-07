@@ -1,4 +1,4 @@
-// Fortune Calendar 月運・年運計算サービス v1.0
+// Fortune Calendar 月運・年運計算サービス v1.1
 import { FortuneScores, FortuneDetails, LuckyInfo, FortuneResult, UserProfile } from '../config/types';
 import { getPlugin } from '../fortunes';
 import { stringToSeed, seededRandom, pickRandom, LUCKY_COLORS, LUCKY_ITEMS, normalizeScore, calculateTotal, finalizeScores } from '../utils/fortuneLogic';
@@ -162,4 +162,108 @@ export function getPeriodLabel(period: FortunePeriod, date: Date): string {
     case 'yearly':
       return `${year}年`;
   }
+}
+
+// ========== 年運計算 ==========
+
+/** 干支（十二支）の相性マトリックス */
+const ZODIAC_COMPATIBILITY: number[] = [0, 5, -5, 10, -5, 5, 0, 5, -5, 10, -5, 5]; // 自分の干支からの距離
+
+/** 9年周期の運勢（九星気学的） */
+const NINE_YEAR_CYCLE = [60, 70, 80, 90, 100, 90, 80, 70, 60]; // 5年目がピーク
+
+/** 年運アドバイステンプレート */
+const YEARLY_ADVICE: Record<'high' | 'mid' | 'low', string[]> = {
+  high: [
+    '飛躍の年！大きな目標に挑戦するチャンスです。',
+    '運気最高潮。積極的に行動することで大きな成果を得られます。',
+    '人生の転機となる可能性あり。直感を信じて進みましょう。',
+  ],
+  mid: [
+    '安定した運気の年。基盤固めに最適です。',
+    '着実な成長が見込める年。コツコツ努力が報われます。',
+    '準備と学びの年。来年への布石を打ちましょう。',
+  ],
+  low: [
+    '充電の年。無理をせず自分を見つめ直す時期です。',
+    '慎重に過ごすことで災いを避けられます。',
+    '内省の年。心身のケアを優先しましょう。',
+  ],
+};
+
+/** 年運スコアを計算 */
+export function calculateYearlyScores(
+  fortuneId: string,
+  targetYear: number,
+  profile?: UserProfile
+): FortuneScores {
+  const plugin = getPlugin(fortuneId);
+  if (!plugin) {
+    return { love: 50, work: 50, money: 50, health: 50, social: 50, total: 50 };
+  }
+
+  // 年の中間日をベースに
+  const baseDate = `${targetYear}-06-15`;
+  const baseResult = plugin.generate(baseDate, profile);
+  const baseScores = { ...baseResult.scores };
+
+  // 年齢による9年周期
+  const birthYear = profile?.birthDate ? new Date(profile.birthDate).getFullYear() : 2000;
+  const age = targetYear - birthYear;
+  const cyclePosition = age % 9;
+  const cycleModifier = ((NINE_YEAR_CYCLE[cyclePosition] - 60) / 40) * 15; // -15 ~ +15
+
+  // 干支相性（12年周期）
+  const zodiacPosition = (targetYear - birthYear) % 12;
+  const zodiacModifier = ZODIAC_COMPATIBILITY[zodiacPosition];
+
+  // スコア補正を適用
+  const totalModifier = cycleModifier + zodiacModifier;
+  const scores: FortuneScores = {
+    love: normalizeScore(baseScores.love + totalModifier, 0, 120),
+    work: normalizeScore(baseScores.work + totalModifier + (targetYear % 2 === 0 ? 5 : -5), 0, 120),
+    money: normalizeScore(baseScores.money + totalModifier, 0, 120),
+    health: normalizeScore(baseScores.health + totalModifier - Math.floor(age / 10), 0, 120),
+    social: normalizeScore(baseScores.social + totalModifier, 0, 120),
+    total: 0,
+  };
+  scores.total = calculateTotal(scores);
+  return finalizeScores(scores);
+}
+
+/** 年運の詳細テキストを生成 */
+function generateYearlyDetails(scores: FortuneScores, year: number): FortuneDetails {
+  return {
+    love: scores.love >= 70 ? '恋愛運好調の年！運命の出会いも' : scores.love >= 40 ? '穏やかな恋愛運。焦らず自然体で' : '自分磨きに集中する年',
+    work: scores.work >= 70 ? '仕事で大きな飛躍が期待できる年' : scores.work >= 40 ? '着実にキャリアを積み上げる年' : '基盤を固める時期。無理は禁物',
+    money: scores.money >= 70 ? '金運上昇！投資や副業にも好機' : scores.money >= 40 ? '堅実な金運。計画的な資産形成を' : '節約と貯蓄を心がけて',
+    health: scores.health >= 70 ? '健康運良好！新しい健康習慣を始めよう' : scores.health >= 40 ? '体調管理を意識して過ごす年' : '健康第一。定期検診を忘れずに',
+    social: scores.social >= 70 ? '人脈が広がる年！積極的に交流を' : scores.social >= 40 ? '信頼関係を深める年' : '質の高い人間関係を大切に',
+    total: `${year}年の運勢`,
+  };
+}
+
+/** 年運結果を生成 */
+export function generateYearlyFortune(
+  fortuneId: string,
+  targetYear: number,
+  profile?: UserProfile
+): FortuneResult {
+  const scores = calculateYearlyScores(fortuneId, targetYear, profile);
+  const details = generateYearlyDetails(scores, targetYear);
+  const seed = stringToSeed(`yearly_${fortuneId}_${targetYear}`);
+  const rand = seededRandom(seed);
+  const lucky: LuckyInfo = {
+    color: pickRandom(LUCKY_COLORS, rand),
+    item: pickRandom(LUCKY_ITEMS, rand),
+    number: Math.floor(rand() * 9) + 1,
+  };
+
+  return {
+    fortuneId,
+    date: `${targetYear}`,
+    scores,
+    details,
+    lucky,
+  };
 }

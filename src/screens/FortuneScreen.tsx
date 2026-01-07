@@ -1,4 +1,4 @@
-// Fortune Calendar 占い結果画面 v1.7 (月運実装)
+// Fortune Calendar 占い結果画面 v1.8 (月運・年運実装)
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
@@ -12,7 +12,7 @@ import { starsDisplay } from '../utils/fortuneUtils';
 import { MyCharacter } from '../components/MyCharacter';
 import { generateDailyAdvice, extractTypeKey } from '../data/adviceParts';
 import { PeriodTabs, FortunePeriod } from '../components/common/PeriodTabs';
-import { generateMonthlyFortune, getPeriodLabel } from '../services/periodFortuneService';
+import { generateMonthlyFortune, generateYearlyFortune, getPeriodLabel } from '../services/periodFortuneService';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -21,6 +21,7 @@ export const FortuneScreen: React.FC = () => {
   const { selectedFortune, setSelectedFortune, selectedDate, setSelectedDate, userConfig, fortuneCache, setFortuneResult } = useAppStore();
   const [result, setResult] = useState<FortuneResult | null>(null);
   const [monthlyResult, setMonthlyResult] = useState<FortuneResult | null>(null);
+  const [yearlyResult, setYearlyResult] = useState<FortuneResult | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<FortunePeriod>('daily');
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
@@ -64,6 +65,15 @@ export const FortuneScreen: React.FC = () => {
       const date = parseDate(selectedDate);
       const monthly = generateMonthlyFortune(currentFortune, date.getFullYear(), date.getMonth() + 1, userConfig.userProfile || undefined);
       setMonthlyResult(monthly);
+    }
+  }, [selectedPeriod, currentFortune, selectedDate, userConfig.userProfile]);
+
+  // 年運生成
+  useEffect(() => {
+    if (selectedPeriod === 'yearly' && currentFortune !== 'omikuji') {
+      const date = parseDate(selectedDate);
+      const yearly = generateYearlyFortune(currentFortune, date.getFullYear(), userConfig.userProfile || undefined);
+      setYearlyResult(yearly);
     }
   }, [selectedPeriod, currentFortune, selectedDate, userConfig.userProfile]);
 
@@ -163,12 +173,27 @@ export const FortuneScreen: React.FC = () => {
           </>
         )}
 
-        {/* 年運は準備中 */}
-        {selectedPeriod === 'yearly' && (
-          <View style={s.comingSoon}>
-            <Text style={s.comingSoonText}>年運は準備中です</Text>
-            <Text style={s.comingSoonSub}>Phase A3で実装予定</Text>
-          </View>
+        {/* 年運コンテンツ */}
+        {selectedPeriod === 'yearly' && yearlyResult && (
+          <>
+            <Text style={s.periodLabel}>{getPeriodLabel('yearly', parseDate(selectedDate))}</Text>
+            <View style={s.chartWrap}>
+              <HexChart scores={yearlyResult.scores} size={220} />
+            </View>
+            <View style={s.totalWrap}>
+              <Text style={s.totalLabel}>今年の総合運</Text>
+              <Text style={s.totalScore}>{yearlyResult.scores.total}点</Text>
+              <Text style={s.totalStars}>{starsDisplay(yearlyResult.scores.total)}</Text>
+              <Text style={s.totalDetail}>{yearlyResult.details.total}</Text>
+            </View>
+            <View style={s.adviceWrap}>
+              <Text style={s.adviceLabel}>今年のアドバイス</Text>
+              <Text style={s.adviceText}>{yearlyResult.details.work}</Text>
+            </View>
+            <LuckyInfo lucky={yearlyResult.lucky} />
+            <Text style={s.sectionTitle}>詳細</Text>
+            <FortuneDetailCards scores={yearlyResult.scores} details={yearlyResult.details} />
+          </>
         )}
 
         {/* 日運コンテンツ */}

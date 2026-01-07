@@ -1,4 +1,4 @@
-// Fortune Calendar v1.4.0g
+// Fortune Calendar v1.4.0x
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -8,7 +8,6 @@ import { useAppStore } from './src/store/useAppStore';
 import { SplashScreen } from './src/components/SplashScreen';
 import { CalendarScreen } from './src/screens/CalendarScreen';
 import { FortuneScreen } from './src/screens/FortuneScreen';
-import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { YearCalendarScreen } from './src/screens/YearCalendarScreen';
 
@@ -58,6 +57,7 @@ export default function App() {
           component={CalendarScreen}
           options={{
             title: '月',
+            headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name="📅" focused={focused} />,
           }}
         />
@@ -66,6 +66,7 @@ export default function App() {
           component={YearCalendarScreen}
           options={{
             title: '年',
+            headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name="📆" focused={focused} />,
           }}
         />
@@ -75,14 +76,6 @@ export default function App() {
           options={{
             title: '占い',
             tabBarIcon: ({ focused }) => <TabIcon name="🔮" focused={focused} />,
-          }}
-        />
-        <Tab.Screen
-          name="History"
-          component={HistoryScreen}
-          options={{
-            title: '履歴',
-            tabBarIcon: ({ focused }) => <TabIcon name="📜" focused={focused} />,
           }}
         />
         <Tab.Screen

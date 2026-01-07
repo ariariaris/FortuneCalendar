@@ -46,6 +46,7 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
     areaCode: '130000',  // 東京
   },
   yearCalendarBestCount: 3,
+  showAge: true,
 };
 
 /** 占術一覧（動物占いをメインに） */

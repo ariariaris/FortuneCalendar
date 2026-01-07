@@ -45,6 +45,7 @@ export interface UserConfig {
   purchaseState: PurchaseState;
   weatherConfig: WeatherConfig;
   yearCalendarBestCount: number;  // 年間カレンダーの★表示数(1-5)
+  showAge: boolean;  // 年齢を表示
 }
 
 /** ユーザープロフィール */

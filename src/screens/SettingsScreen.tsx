@@ -1,10 +1,13 @@
-// Fortune Calendar 設定画面 v1.1
+// Fortune Calendar 設定画面 v1.4 (AI占い追加)
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST } from '../config/defaultConfig';
+import { FaceReadingScreen } from '../components/faceReading/FaceReadingScreen';
+import { FourPillarsScreen } from '../components/fourPillars/FourPillarsScreen';
+import { PalmReadingScreen } from '../components/palmReading/PalmReadingScreen';
 
 export const SettingsScreen: React.FC = () => {
   const { userConfig, setUserConfig, setProfile } = useAppStore();
@@ -13,16 +16,21 @@ export const SettingsScreen: React.FC = () => {
   const [passcode, setPasscode] = useState('');
   const [showDevSettings, setShowDevSettings] = useState(false);
 
-  // プロフィール入力
-  const [name, setName] = useState(userConfig.userProfile?.name || '');
-  const birthStr = userConfig.userProfile?.birthDate || '1990-01-01';
-  const [initY, initM, initD] = birthStr.split('-').map(Number);
-  const [year, setYear] = useState(initY || 1990);
-  const [month, setMonth] = useState(initM || 1);
-  const [day, setDay] = useState(initD || 1);
-  const [gender, setGender] = useState<'male' | 'female' | 'other'>(userConfig.userProfile?.gender || 'female');
-  const [bloodType, setBloodType] = useState(userConfig.userProfile?.bloodType || 'A');
+  // AI占いモーダル
+  const [showFaceReading, setShowFaceReading] = useState(false);
+  const [showFourPillars, setShowFourPillars] = useState(false);
+  const [showPalmReading, setShowPalmReading] = useState(false);
+
+  // プロフィール
+  const profile = userConfig.userProfile;
+  const birthStr = profile?.birthDate || '1990-01-01';
+  const [birthY, birthM, birthD] = birthStr.split('-').map(Number);
   const [showPicker, setShowPicker] = useState<'year' | 'month' | 'day' | null>(null);
+
+  // 自動保存ヘルパー
+  const updateProfile = (updates: { name?: string; birthDate?: string; gender?: 'male' | 'female' | 'other'; bloodType?: 'A' | 'B' | 'O' | 'AB' }) => {
+    setProfile({ name: profile?.name, birthDate: birthStr, gender: profile?.gender || 'female', bloodType: profile?.bloodType || 'A', ...updates });
+  };
 
   const handleTap = () => {
     const newCount = tapCount + 1;
@@ -43,12 +51,6 @@ export const SettingsScreen: React.FC = () => {
       Alert.alert('エラー', 'パスコードが違います');
       setPasscode('');
     }
-  };
-
-  const saveProfile = () => {
-    const birthDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setProfile({ name: name || undefined, birthDate, gender, bloodType: bloodType as 'A' | 'B' | 'O' | 'AB' });
-    Alert.alert('保存しました');
   };
 
   const currentYear = new Date().getFullYear();
@@ -72,22 +74,22 @@ export const SettingsScreen: React.FC = () => {
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>お名前</Text>
-            <TextInput style={s.input} value={name} onChangeText={setName} placeholder="(任意)" />
+            <TextInput style={s.input} value={profile?.name || ''} onChangeText={(v) => updateProfile({ name: v || undefined })} placeholder="(任意)" />
           </View>
           <View style={s.row}>
             <Text style={s.label}>生年月日</Text>
             <View style={s.dateRow}>
-              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('year')}><Text style={s.dateBtnText}>{year}年</Text></TouchableOpacity>
-              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('month')}><Text style={s.dateBtnText}>{month}月</Text></TouchableOpacity>
-              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('day')}><Text style={s.dateBtnText}>{day}日</Text></TouchableOpacity>
+              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('year')}><Text style={s.dateBtnText}>{birthY}年</Text></TouchableOpacity>
+              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('month')}><Text style={s.dateBtnText}>{birthM}月</Text></TouchableOpacity>
+              <TouchableOpacity style={s.dateBtn} onPress={() => setShowPicker('day')}><Text style={s.dateBtnText}>{birthD}日</Text></TouchableOpacity>
             </View>
           </View>
           <View style={s.row}>
             <Text style={s.label}>性別</Text>
             <View style={s.btnGroup}>
               {([['female', '女性'], ['male', '男性'], ['other', 'その他']] as const).map(([v, label]) => (
-                <TouchableOpacity key={v} style={[s.btBtn, gender === v && s.btBtnActive]} onPress={() => setGender(v)}>
-                  <Text style={[s.btText, gender === v && s.btTextActive]}>{label}</Text>
+                <TouchableOpacity key={v} style={[s.btBtn, (profile?.gender || 'female') === v && s.btBtnActive]} onPress={() => updateProfile({ gender: v })}>
+                  <Text style={[s.btText, (profile?.gender || 'female') === v && s.btTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -96,15 +98,12 @@ export const SettingsScreen: React.FC = () => {
             <Text style={s.label}>血液型</Text>
             <View style={s.btnGroup}>
               {(['A', 'B', 'O', 'AB'] as const).map((bt) => (
-                <TouchableOpacity key={bt} style={[s.btBtn, bloodType === bt && s.btBtnActive]} onPress={() => setBloodType(bt)}>
-                  <Text style={[s.btText, bloodType === bt && s.btTextActive]}>{bt}</Text>
+                <TouchableOpacity key={bt} style={[s.btBtn, (profile?.bloodType || 'A') === bt && s.btBtnActive]} onPress={() => updateProfile({ bloodType: bt })}>
+                  <Text style={[s.btText, (profile?.bloodType || 'A') === bt && s.btTextActive]}>{bt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
-          <TouchableOpacity style={s.saveBtn} onPress={saveProfile}>
-            <Text style={s.saveBtnText}>プロフィールを保存</Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={s.section}>通知</Text>
@@ -150,6 +149,10 @@ export const SettingsScreen: React.FC = () => {
         <Text style={s.section}>年間カレンダー</Text>
         <View style={s.card}>
           <View style={s.row}>
+            <Text style={s.label}>年齢を表示</Text>
+            <Switch value={userConfig.showAge ?? true} onValueChange={(v) => setUserConfig({ showAge: v })} />
+          </View>
+          <View style={s.row}>
             <Text style={s.label}>★表示数/月</Text>
             <View style={s.btnGroup}>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -169,6 +172,34 @@ export const SettingsScreen: React.FC = () => {
               <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(f.id)} onValueChange={() => toggleFortune(f.id)} />
             </View>
           ))}
+        </View>
+
+        <Text style={s.section}>AI占い</Text>
+        <View style={s.card}>
+          <TouchableOpacity style={s.aiBtn} onPress={() => setShowFaceReading(true)}>
+            <Text style={s.aiBtnIcon}>👤</Text>
+            <View style={s.aiBtnContent}>
+              <Text style={s.aiBtnTitle}>顔相AI</Text>
+              <Text style={s.aiBtnDesc}>顔写真から18項目を診断</Text>
+            </View>
+            <Text style={s.aiBtnArrow}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.aiBtn} onPress={() => setShowFourPillars(true)}>
+            <Text style={s.aiBtnIcon}>🔮</Text>
+            <View style={s.aiBtnContent}>
+              <Text style={s.aiBtnTitle}>四柱推命</Text>
+              <Text style={s.aiBtnDesc}>生年月日から命式を算出</Text>
+            </View>
+            <Text style={s.aiBtnArrow}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.aiBtn} onPress={() => setShowPalmReading(true)}>
+            <Text style={s.aiBtnIcon}>✋</Text>
+            <View style={s.aiBtnContent}>
+              <Text style={s.aiBtnTitle}>手相AI</Text>
+              <Text style={s.aiBtnDesc}>手のひら写真から7項目を診断</Text>
+            </View>
+            <Text style={s.aiBtnArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={handleTap} style={s.version}>
@@ -191,6 +222,18 @@ export const SettingsScreen: React.FC = () => {
       <Modal visible={showDevSettings} animationType="slide">
         <DevSettingsScreen onClose={() => setShowDevSettings(false)} />
       </Modal>
+      <Modal visible={showFaceReading} animationType="slide">
+        <FaceReadingScreen />
+        <TouchableOpacity style={s.closeBtn} onPress={() => setShowFaceReading(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
+      </Modal>
+      <Modal visible={showFourPillars} animationType="slide">
+        <FourPillarsScreen />
+        <TouchableOpacity style={s.closeBtn} onPress={() => setShowFourPillars(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
+      </Modal>
+      <Modal visible={showPalmReading} animationType="slide">
+        <PalmReadingScreen />
+        <TouchableOpacity style={s.closeBtn} onPress={() => setShowPalmReading(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
+      </Modal>
       <Modal visible={showPicker !== null} transparent animationType="fade">
         <View style={s.modal}>
           <View style={s.pickerBox}>
@@ -198,9 +241,10 @@ export const SettingsScreen: React.FC = () => {
             <ScrollView style={s.pickerScroll}>
               {(showPicker === 'year' ? years : showPicker === 'month' ? months : days).map((v) => (
                 <TouchableOpacity key={v} style={s.pickerItem} onPress={() => {
-                  if (showPicker === 'year') setYear(v);
-                  else if (showPicker === 'month') setMonth(v);
-                  else setDay(v);
+                  const newY = showPicker === 'year' ? v : birthY;
+                  const newM = showPicker === 'month' ? v : birthM;
+                  const newD = showPicker === 'day' ? v : birthD;
+                  updateProfile({ birthDate: `${newY}-${String(newM).padStart(2, '0')}-${String(newD).padStart(2, '0')}` });
                   setShowPicker(null);
                 }}>
                   <Text style={s.pickerItemText}>{v}{showPicker === 'year' ? '年' : showPicker === 'month' ? '月' : '日'}</Text>
@@ -232,8 +276,6 @@ const s = StyleSheet.create({
   btBtnActive: { backgroundColor: '#FF69B4' },
   btText: { fontSize: 14, color: '#666' },
   btTextActive: { color: '#fff', fontWeight: 'bold' },
-  saveBtn: { backgroundColor: '#FF69B4', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 },
-  saveBtnText: { color: '#fff', fontWeight: 'bold' },
   version: { alignItems: 'center', marginTop: 32, marginBottom: 16 },
   versionText: { color: '#ccc', fontSize: 12 },
   modal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
@@ -249,6 +291,14 @@ const s = StyleSheet.create({
   pickerScroll: { maxHeight: 280 },
   pickerItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   pickerItemText: { fontSize: 16, textAlign: 'center' },
+  aiBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  aiBtnIcon: { fontSize: 24, width: 40, textAlign: 'center' },
+  aiBtnContent: { flex: 1 },
+  aiBtnTitle: { fontSize: 15, fontWeight: '600', color: '#333' },
+  aiBtnDesc: { fontSize: 12, color: '#999', marginTop: 2 },
+  aiBtnArrow: { fontSize: 16, color: '#ccc' },
+  closeBtn: { backgroundColor: '#FF69B4', padding: 16, alignItems: 'center' },
+  closeBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default SettingsScreen;

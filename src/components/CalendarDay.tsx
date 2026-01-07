@@ -1,6 +1,10 @@
-// Fortune Calendar カレンダー日付 v1.5
+// Fortune Calendar カレンダー日付 v1.6
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isTablet = SCREEN_WIDTH >= 768;
+const SCALE = isTablet ? 1.5 : 1;
 
 interface WeatherInfo {
   icon?: string;
@@ -63,15 +67,15 @@ export const CalendarDay: React.FC<Props> = ({
 };
 
 const s = StyleSheet.create({
-  cell: { flex: 1, aspectRatio: 1, alignItems: 'center', paddingTop: 4, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
-  dayWrap: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  cell: { flex: 1, aspectRatio: 0.85, alignItems: 'center', paddingTop: 6 * SCALE, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
+  dayWrap: { width: 32 * SCALE, height: 32 * SCALE, borderRadius: 16 * SCALE, alignItems: 'center', justifyContent: 'center' },
   today: { backgroundColor: '#FF2D55' },
   selected: { backgroundColor: '#007AFF' },
-  dayText: { fontSize: 15, fontWeight: '400' },
-  weatherIcon: { fontSize: 16, marginTop: 1 },
-  temp: { fontSize: 10, color: '#FF6B6B', fontWeight: '600' },
-  rain: { fontSize: 9, color: '#4A90D9' },
-  stars: { fontSize: 6, marginTop: 1, letterSpacing: -1 },
+  dayText: { fontSize: 17 * SCALE, fontWeight: '500' },
+  weatherIcon: { fontSize: 18 * SCALE, marginTop: 2 },
+  temp: { fontSize: 12 * SCALE, color: '#FF6B6B', fontWeight: '600' },
+  rain: { fontSize: 11 * SCALE, color: '#4A90D9' },
+  stars: { fontSize: 8 * SCALE, marginTop: 2, letterSpacing: -1 },
 });
 
 export default CalendarDay;

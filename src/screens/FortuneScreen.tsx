@@ -1,4 +1,4 @@
-// Fortune Calendar 占い結果画面 v1.6 (月運・年運タブ追加)
+// Fortune Calendar 占い結果画面 v1.7 (月運実装)
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
@@ -12,6 +12,7 @@ import { starsDisplay } from '../utils/fortuneUtils';
 import { MyCharacter } from '../components/MyCharacter';
 import { generateDailyAdvice, extractTypeKey } from '../data/adviceParts';
 import { PeriodTabs, FortunePeriod } from '../components/common/PeriodTabs';
+import { generateMonthlyFortune, getPeriodLabel } from '../services/periodFortuneService';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -19,6 +20,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export const FortuneScreen: React.FC = () => {
   const { selectedFortune, setSelectedFortune, selectedDate, setSelectedDate, userConfig, fortuneCache, setFortuneResult } = useAppStore();
   const [result, setResult] = useState<FortuneResult | null>(null);
+  const [monthlyResult, setMonthlyResult] = useState<FortuneResult | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<FortunePeriod>('daily');
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
@@ -55,6 +57,15 @@ export const FortuneScreen: React.FC = () => {
   useEffect(() => {
     generateFortune();
   }, [currentFortune, selectedDate, userConfig.userProfile]);
+
+  // 月運生成
+  useEffect(() => {
+    if (selectedPeriod === 'monthly' && currentFortune !== 'omikuji') {
+      const date = parseDate(selectedDate);
+      const monthly = generateMonthlyFortune(currentFortune, date.getFullYear(), date.getMonth() + 1, userConfig.userProfile || undefined);
+      setMonthlyResult(monthly);
+    }
+  }, [selectedPeriod, currentFortune, selectedDate, userConfig.userProfile]);
 
   const generateFortune = () => {
     const plugin = getPlugin(currentFortune);
@@ -129,13 +140,34 @@ export const FortuneScreen: React.FC = () => {
           disabled={currentFortune === 'omikuji'}
         />
 
-        {/* 月運・年運は準備中 */}
-        {selectedPeriod !== 'daily' && (
+        {/* 月運コンテンツ */}
+        {selectedPeriod === 'monthly' && monthlyResult && (
+          <>
+            <Text style={s.periodLabel}>{getPeriodLabel('monthly', parseDate(selectedDate))}</Text>
+            <View style={s.chartWrap}>
+              <HexChart scores={monthlyResult.scores} size={220} />
+            </View>
+            <View style={s.totalWrap}>
+              <Text style={s.totalLabel}>今月の総合運</Text>
+              <Text style={s.totalScore}>{monthlyResult.scores.total}点</Text>
+              <Text style={s.totalStars}>{starsDisplay(monthlyResult.scores.total)}</Text>
+              <Text style={s.totalDetail}>{monthlyResult.details.total}</Text>
+            </View>
+            <View style={s.adviceWrap}>
+              <Text style={s.adviceLabel}>今月のアドバイス</Text>
+              <Text style={s.adviceText}>{monthlyResult.details.love}</Text>
+            </View>
+            <LuckyInfo lucky={monthlyResult.lucky} />
+            <Text style={s.sectionTitle}>詳細</Text>
+            <FortuneDetailCards scores={monthlyResult.scores} details={monthlyResult.details} />
+          </>
+        )}
+
+        {/* 年運は準備中 */}
+        {selectedPeriod === 'yearly' && (
           <View style={s.comingSoon}>
-            <Text style={s.comingSoonText}>
-              {selectedPeriod === 'monthly' ? '月運' : '年運'}は準備中です
-            </Text>
-            <Text style={s.comingSoonSub}>Phase A2-A3で実装予定</Text>
+            <Text style={s.comingSoonText}>年運は準備中です</Text>
+            <Text style={s.comingSoonSub}>Phase A3で実装予定</Text>
           </View>
         )}
 
@@ -203,6 +235,7 @@ const s = StyleSheet.create({
   comingSoon: { backgroundColor: '#fff', borderRadius: 12, padding: 32, alignItems: 'center', marginVertical: 24 },
   comingSoonText: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4', marginBottom: 8 },
   comingSoonSub: { fontSize: 12, color: '#999' },
+  periodLabel: { fontSize: 16, fontWeight: 'bold', color: '#FF69B4', textAlign: 'center', marginBottom: 8 },
 });
 
 export default FortuneScreen;

@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v1.6 (占いセクション統合)
+// Fortune Calendar 設定画面 v1.7 (隠し占いメニュー)
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
@@ -13,8 +13,21 @@ export const SettingsScreen: React.FC = () => {
   const [showPasscode, setShowPasscode] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [showDevSettings, setShowDevSettings] = useState(false);
-
   const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // 隠し占いメニュー
+  const [charTapCount, setCharTapCount] = useState(0);
+  const [showHiddenFortunes, setShowHiddenFortunes] = useState(false);
+
+  const handleCharTap = () => {
+    const newCount = charTapCount + 1;
+    setCharTapCount(newCount);
+    if (newCount >= 10) {
+      setShowHiddenFortunes(true);
+      setCharTapCount(0);
+    }
+    setTimeout(() => setCharTapCount(0), 2000);
+  };
 
   const themeColor = userConfig.themeColor || '#FF69B4';
   const fontSize = userConfig.fontSize || 'md';
@@ -62,7 +75,9 @@ export const SettingsScreen: React.FC = () => {
     if (newEnabled.length === 0) { Alert.alert('エラー', '最低1つは選択してください'); return; }
     setUserConfig({ enabledFortunes: newEnabled });
   };
-  const freeFortunes = FORTUNE_LIST.filter((f) => f.category === 'free');
+  // 動物占いのみデフォルト表示、他は隠しメニュー
+  const mainFortune = FORTUNE_LIST.find((f) => f.id === 'honDoubutsu');
+  const hiddenFortunes = FORTUNE_LIST.filter((f) => f.category === 'free' && f.id !== 'honDoubutsu');
 
   return (
     <View style={s.container}>
@@ -181,7 +196,13 @@ export const SettingsScreen: React.FC = () => {
 
         <Text style={s.section}>占い</Text>
         <View style={s.card}>
-          {freeFortunes.map((f) => (
+          {mainFortune && (
+            <View style={s.row}>
+              <Text style={s.label}>{mainFortune.name}</Text>
+              <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(mainFortune.id)} onValueChange={() => toggleFortune(mainFortune.id)} />
+            </View>
+          )}
+          {showHiddenFortunes && hiddenFortunes.map((f) => (
             <View key={f.id} style={s.row}>
               <Text style={s.label}>{f.name}</Text>
               <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(f.id)} onValueChange={() => toggleFortune(f.id)} />
@@ -202,6 +223,9 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        <TouchableOpacity onPress={handleCharTap} style={s.charBottom}>
+          <MyCharacter size={32} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleTap} style={s.version}>
           <Text style={s.versionText}>Fortune Calendar v{APP_VERSION}</Text>
         </TouchableOpacity>
@@ -306,6 +330,7 @@ const s = StyleSheet.create({
   colorItemText: { fontSize: 10, color: '#666' },
   divider: { height: 1, backgroundColor: '#eee', marginVertical: 8 },
   devLabel: { fontSize: 12, color: '#999', backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  charBottom: { alignItems: 'center', marginTop: 24, opacity: 0.3 },
 });
 
 export default SettingsScreen;

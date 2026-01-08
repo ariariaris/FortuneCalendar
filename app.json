@@ -31,7 +31,9 @@
       "baseUrl": "/FortuneCalendar"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser",
+      "expo-secure-store"
     ]
   }
 }

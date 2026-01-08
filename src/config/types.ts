@@ -32,6 +32,12 @@ export interface WeatherConfig {
   areaCode: string;  // 気象庁地域コード（東京:130000）
 }
 
+/** フォントサイズ */
+export type FontSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+
+/** カレンダー表示モード */
+export type CalendarViewMode = 'month' | 'week' | 'day';
+
 /** ユーザー設定 */
 export interface UserConfig {
   userProfile: UserProfile | null;
@@ -41,6 +47,9 @@ export interface UserConfig {
   notificationEnabled: boolean;
   notificationTime: string;
   themeMode: 'light' | 'dark';
+  themeColor: string;  // テーマカラー (20色から選択)
+  fontSize: FontSize;  // 文字サイズ (5段階)
+  calendarViewMode: CalendarViewMode;  // カレンダー表示モード
   starColorMode: 'simple' | 'colorful';
   purchaseState: PurchaseState;
   weatherConfig: WeatherConfig;

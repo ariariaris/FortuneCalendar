@@ -33,6 +33,9 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   notificationEnabled: true,
   notificationTime: '07:00',
   themeMode: 'light',
+  themeColor: '#FF69B4',  // デフォルト: ピンク
+  fontSize: 'md',  // デフォルト: 中
+  calendarViewMode: 'month',  // デフォルト: 月表示
   starColorMode: 'simple',
   purchaseState: {
     plan: 'free',
@@ -48,6 +51,39 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   yearCalendarBestCount: 3,
   showAge: true,
 };
+
+/** テーマカラー20色 */
+export const THEME_COLORS = [
+  { id: 'pink', name: 'ピンク', color: '#FF69B4' },
+  { id: 'rose', name: 'ローズ', color: '#E91E63' },
+  { id: 'red', name: 'レッド', color: '#F44336' },
+  { id: 'orange', name: 'オレンジ', color: '#FF9800' },
+  { id: 'amber', name: 'アンバー', color: '#FFC107' },
+  { id: 'yellow', name: 'イエロー', color: '#FFEB3B' },
+  { id: 'lime', name: 'ライム', color: '#CDDC39' },
+  { id: 'green', name: 'グリーン', color: '#4CAF50' },
+  { id: 'teal', name: 'ティール', color: '#009688' },
+  { id: 'cyan', name: 'シアン', color: '#00BCD4' },
+  { id: 'lightblue', name: 'ライトブルー', color: '#03A9F4' },
+  { id: 'blue', name: 'ブルー', color: '#2196F3' },
+  { id: 'indigo', name: 'インディゴ', color: '#3F51B5' },
+  { id: 'purple', name: 'パープル', color: '#9C27B0' },
+  { id: 'deeppurple', name: 'ディープパープル', color: '#673AB7' },
+  { id: 'brown', name: 'ブラウン', color: '#795548' },
+  { id: 'grey', name: 'グレー', color: '#9E9E9E' },
+  { id: 'bluegrey', name: 'ブルーグレー', color: '#607D8B' },
+  { id: 'black', name: 'ブラック', color: '#212121' },
+  { id: 'white', name: 'ホワイト', color: '#FAFAFA' },
+] as const;
+
+/** フォントサイズ設定 */
+export const FONT_SIZES = {
+  xs: { label: '極小', base: 10, scale: 0.8 },
+  sm: { label: '小', base: 12, scale: 0.9 },
+  md: { label: '中', base: 14, scale: 1.0 },
+  lg: { label: '大', base: 16, scale: 1.1 },
+  xl: { label: '特大', base: 18, scale: 1.2 },
+} as const;
 
 /** 占術一覧（動物占いをメインに） */
 export const FORTUNE_LIST = [
@@ -71,4 +107,4 @@ export const FORTUNE_LIST = [
 ] as const;
 
 export const DEV_PASSCODE = '123456';
-export const APP_VERSION = '1.4.0c';
+export const APP_VERSION = '1.5.0';

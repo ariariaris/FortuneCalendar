@@ -1,10 +1,11 @@
-// Fortune Calendar 設定画面 v1.4 (AI占い追加)
+// Fortune Calendar 設定画面 v1.5 (テーマカラー・文字サイズ追加)
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
 import { MyCharacter } from '../components/MyCharacter';
-import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST } from '../config/defaultConfig';
+import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
+import { FontSize } from '../config/types';
 import { FaceReadingScreen } from '../components/faceReading/FaceReadingScreen';
 import { FourPillarsScreen } from '../components/fourPillars/FourPillarsScreen';
 import { PalmReadingScreen } from '../components/palmReading/PalmReadingScreen';
@@ -20,6 +21,10 @@ export const SettingsScreen: React.FC = () => {
   const [showFaceReading, setShowFaceReading] = useState(false);
   const [showFourPillars, setShowFourPillars] = useState(false);
   const [showPalmReading, setShowPalmReading] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const themeColor = userConfig.themeColor || '#FF69B4';
+  const fontSize = userConfig.fontSize || 'md';
 
   // プロフィール
   const profile = userConfig.userProfile;
@@ -119,6 +124,23 @@ export const SettingsScreen: React.FC = () => {
           <View style={s.row}>
             <Text style={s.label}>ダークモード</Text>
             <Switch value={userConfig.themeMode === 'dark'} onValueChange={(v) => setUserConfig({ themeMode: v ? 'dark' : 'light' })} />
+          </View>
+          <View style={s.row}>
+            <Text style={s.label}>テーマカラー</Text>
+            <TouchableOpacity style={s.colorBtn} onPress={() => setShowColorPicker(true)}>
+              <View style={[s.colorPreview, { backgroundColor: themeColor }]} />
+              <Text style={s.colorName}>{THEME_COLORS.find(c => c.color === themeColor)?.name || 'ピンク'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.row}>
+            <Text style={s.label}>文字サイズ</Text>
+            <View style={s.btnGroup}>
+              {(Object.keys(FONT_SIZES) as FontSize[]).map((key) => (
+                <TouchableOpacity key={key} style={[s.btBtn, fontSize === key && { backgroundColor: themeColor }]} onPress={() => setUserConfig({ fontSize: key })}>
+                  <Text style={[s.btText, fontSize === key && s.btTextActive]}>{FONT_SIZES[key].label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
           <View style={s.row}>
             <Text style={s.label}>星をカラフルに表示</Text>
@@ -234,6 +256,22 @@ export const SettingsScreen: React.FC = () => {
         <PalmReadingScreen />
         <TouchableOpacity style={s.closeBtn} onPress={() => setShowPalmReading(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
       </Modal>
+      <Modal visible={showColorPicker} transparent animationType="fade">
+        <View style={s.modal}>
+          <View style={s.colorPickerBox}>
+            <Text style={s.pickerTitle}>テーマカラー</Text>
+            <View style={s.colorGrid}>
+              {THEME_COLORS.map((c) => (
+                <TouchableOpacity key={c.id} style={[s.colorItem, themeColor === c.color && s.colorItemActive]} onPress={() => { setUserConfig({ themeColor: c.color }); setShowColorPicker(false); }}>
+                  <View style={[s.colorCircle, { backgroundColor: c.color }]} />
+                  <Text style={s.colorItemText}>{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={s.btn} onPress={() => setShowColorPicker(false)}><Text>閉じる</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={showPicker !== null} transparent animationType="fade">
         <View style={s.modal}>
           <View style={s.pickerBox}>
@@ -299,6 +337,15 @@ const s = StyleSheet.create({
   aiBtnArrow: { fontSize: 16, color: '#ccc' },
   closeBtn: { backgroundColor: '#FF69B4', padding: 16, alignItems: 'center' },
   closeBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  colorBtn: { flexDirection: 'row', alignItems: 'center' },
+  colorPreview: { width: 24, height: 24, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: '#ddd' },
+  colorName: { fontSize: 14, color: '#333' },
+  colorPickerBox: { backgroundColor: '#fff', borderRadius: 12, width: 320, maxHeight: 500, padding: 16 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginVertical: 12 },
+  colorItem: { width: '23%', alignItems: 'center', paddingVertical: 8, marginBottom: 8, borderRadius: 8 },
+  colorItemActive: { backgroundColor: '#f0f0f0' },
+  colorCircle: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#ddd', marginBottom: 4 },
+  colorItemText: { fontSize: 10, color: '#666' },
 });
 
 export default SettingsScreen;

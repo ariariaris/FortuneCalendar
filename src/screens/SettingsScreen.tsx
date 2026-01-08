@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v1.5 (テーマカラー・文字サイズ追加)
+// Fortune Calendar 設定画面 v1.6 (占いセクション統合)
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
@@ -6,9 +6,6 @@ import { DevSettingsScreen } from './DevSettingsScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
 import { FontSize } from '../config/types';
-import { FaceReadingScreen } from '../components/faceReading/FaceReadingScreen';
-import { FourPillarsScreen } from '../components/fourPillars/FourPillarsScreen';
-import { PalmReadingScreen } from '../components/palmReading/PalmReadingScreen';
 
 export const SettingsScreen: React.FC = () => {
   const { userConfig, setUserConfig, setProfile } = useAppStore();
@@ -17,10 +14,6 @@ export const SettingsScreen: React.FC = () => {
   const [passcode, setPasscode] = useState('');
   const [showDevSettings, setShowDevSettings] = useState(false);
 
-  // AI占いモーダル
-  const [showFaceReading, setShowFaceReading] = useState(false);
-  const [showFourPillars, setShowFourPillars] = useState(false);
-  const [showPalmReading, setShowPalmReading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   const themeColor = userConfig.themeColor || '#FF69B4';
@@ -194,34 +187,19 @@ export const SettingsScreen: React.FC = () => {
               <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(f.id)} onValueChange={() => toggleFortune(f.id)} />
             </View>
           ))}
-        </View>
-
-        <Text style={s.section}>AI占い</Text>
-        <View style={s.card}>
-          <TouchableOpacity style={s.aiBtn} onPress={() => setShowFaceReading(true)}>
-            <Text style={s.aiBtnIcon}>👤</Text>
-            <View style={s.aiBtnContent}>
-              <Text style={s.aiBtnTitle}>顔相AI</Text>
-              <Text style={s.aiBtnDesc}>顔写真から18項目を診断</Text>
-            </View>
-            <Text style={s.aiBtnArrow}>→</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.aiBtn} onPress={() => setShowFourPillars(true)}>
-            <Text style={s.aiBtnIcon}>🔮</Text>
-            <View style={s.aiBtnContent}>
-              <Text style={s.aiBtnTitle}>四柱推命</Text>
-              <Text style={s.aiBtnDesc}>生年月日から命式を算出</Text>
-            </View>
-            <Text style={s.aiBtnArrow}>→</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.aiBtn} onPress={() => setShowPalmReading(true)}>
-            <Text style={s.aiBtnIcon}>✋</Text>
-            <View style={s.aiBtnContent}>
-              <Text style={s.aiBtnTitle}>手相AI</Text>
-              <Text style={s.aiBtnDesc}>手のひら写真から7項目を診断</Text>
-            </View>
-            <Text style={s.aiBtnArrow}>→</Text>
-          </TouchableOpacity>
+          <View style={s.divider} />
+          <View style={s.row}>
+            <Text style={s.label}>顔相</Text>
+            <Text style={s.devLabel}>開発中</Text>
+          </View>
+          <View style={s.row}>
+            <Text style={s.label}>四柱推命</Text>
+            <Text style={s.devLabel}>開発中</Text>
+          </View>
+          <View style={s.row}>
+            <Text style={s.label}>手相</Text>
+            <Text style={s.devLabel}>開発中</Text>
+          </View>
         </View>
 
         <TouchableOpacity onPress={handleTap} style={s.version}>
@@ -243,18 +221,6 @@ export const SettingsScreen: React.FC = () => {
       </Modal>
       <Modal visible={showDevSettings} animationType="slide">
         <DevSettingsScreen onClose={() => setShowDevSettings(false)} />
-      </Modal>
-      <Modal visible={showFaceReading} animationType="slide">
-        <FaceReadingScreen />
-        <TouchableOpacity style={s.closeBtn} onPress={() => setShowFaceReading(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
-      </Modal>
-      <Modal visible={showFourPillars} animationType="slide">
-        <FourPillarsScreen />
-        <TouchableOpacity style={s.closeBtn} onPress={() => setShowFourPillars(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
-      </Modal>
-      <Modal visible={showPalmReading} animationType="slide">
-        <PalmReadingScreen />
-        <TouchableOpacity style={s.closeBtn} onPress={() => setShowPalmReading(false)}><Text style={s.closeBtnText}>閉じる</Text></TouchableOpacity>
       </Modal>
       <Modal visible={showColorPicker} transparent animationType="fade">
         <View style={s.modal}>
@@ -329,14 +295,6 @@ const s = StyleSheet.create({
   pickerScroll: { maxHeight: 280 },
   pickerItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   pickerItemText: { fontSize: 16, textAlign: 'center' },
-  aiBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  aiBtnIcon: { fontSize: 24, width: 40, textAlign: 'center' },
-  aiBtnContent: { flex: 1 },
-  aiBtnTitle: { fontSize: 15, fontWeight: '600', color: '#333' },
-  aiBtnDesc: { fontSize: 12, color: '#999', marginTop: 2 },
-  aiBtnArrow: { fontSize: 16, color: '#ccc' },
-  closeBtn: { backgroundColor: '#FF69B4', padding: 16, alignItems: 'center' },
-  closeBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   colorBtn: { flexDirection: 'row', alignItems: 'center' },
   colorPreview: { width: 24, height: 24, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: '#ddd' },
   colorName: { fontSize: 14, color: '#333' },
@@ -346,6 +304,8 @@ const s = StyleSheet.create({
   colorItemActive: { backgroundColor: '#f0f0f0' },
   colorCircle: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#ddd', marginBottom: 4 },
   colorItemText: { fontSize: 10, color: '#666' },
+  divider: { height: 1, backgroundColor: '#eee', marginVertical: 8 },
+  devLabel: { fontSize: 12, color: '#999', backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
 });
 
 export default SettingsScreen;

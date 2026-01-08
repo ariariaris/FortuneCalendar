@@ -1,5 +1,5 @@
-// Fortune Calendar 設定画面 v1.7 (隠し占いメニュー)
-import React, { useState } from 'react';
+// Fortune Calendar 設定画面 v1.9g (picker閉じ時タイトル非表示)
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
@@ -15,19 +15,8 @@ export const SettingsScreen: React.FC = () => {
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
-  // 隠し占いメニュー
-  const [charTapCount, setCharTapCount] = useState(0);
+  // 隠し占いメニュー（名前に9999で表示、0000で非表示）
   const [showHiddenFortunes, setShowHiddenFortunes] = useState(false);
-
-  const handleCharTap = () => {
-    const newCount = charTapCount + 1;
-    setCharTapCount(newCount);
-    if (newCount >= 10) {
-      setShowHiddenFortunes(true);
-      setCharTapCount(0);
-    }
-    setTimeout(() => setCharTapCount(0), 2000);
-  };
 
   const themeColor = userConfig.themeColor || '#FF69B4';
   const fontSize = userConfig.fontSize || 'md';
@@ -41,6 +30,13 @@ export const SettingsScreen: React.FC = () => {
   // 自動保存ヘルパー
   const updateProfile = (updates: { name?: string; birthDate?: string; gender?: 'male' | 'female' | 'other'; bloodType?: 'A' | 'B' | 'O' | 'AB' }) => {
     setProfile({ name: profile?.name, birthDate: birthStr, gender: profile?.gender || 'female', bloodType: profile?.bloodType || 'A', ...updates });
+  };
+
+  // 名前変更ハンドラ（999で隠しメニュー表示、000で非表示）
+  const handleNameChange = (v: string) => {
+    if (v === '999') { setShowHiddenFortunes(true); return; }
+    if (v === '000') { setShowHiddenFortunes(false); return; }
+    updateProfile({ name: v || undefined });
   };
 
   const handleTap = () => {
@@ -65,9 +61,19 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+  const defaultAge = 30;
+  const years = Array.from({ length: 100 }, (_, i) => currentYear - defaultAge - 50 + i).reverse();
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const yearScrollRef = useRef<ScrollView>(null);
+  const targetYear = currentYear - defaultAge;
+  const targetYearIndex = years.indexOf(targetYear);
+
+  const handleYearScrollLayout = () => {
+    if (showPicker === 'year') {
+      yearScrollRef.current?.scrollTo({ y: targetYearIndex * 49, animated: false });
+    }
+  };
 
   const toggleFortune = (id: string) => {
     const enabled = userConfig.enabledFortunes || ['honDoubutsu'];
@@ -87,7 +93,7 @@ export const SettingsScreen: React.FC = () => {
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>お名前</Text>
-            <TextInput style={s.input} value={profile?.name || ''} onChangeText={(v) => updateProfile({ name: v || undefined })} placeholder="(任意)" />
+            <TextInput style={s.input} value={profile?.name || ''} onChangeText={handleNameChange} placeholder="(任意)" />
           </View>
           <View style={s.row}>
             <Text style={s.label}>生年月日</Text>
@@ -202,30 +208,31 @@ export const SettingsScreen: React.FC = () => {
               <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(mainFortune.id)} onValueChange={() => toggleFortune(mainFortune.id)} />
             </View>
           )}
-          {showHiddenFortunes && hiddenFortunes.map((f) => (
-            <View key={f.id} style={s.row}>
-              <Text style={s.label}>{f.name}</Text>
-              <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(f.id)} onValueChange={() => toggleFortune(f.id)} />
-            </View>
-          ))}
-          <View style={s.divider} />
-          <View style={s.row}>
-            <Text style={s.label}>顔相</Text>
-            <Text style={s.devLabel}>開発中</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={s.label}>四柱推命</Text>
-            <Text style={s.devLabel}>開発中</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={s.label}>手相</Text>
-            <Text style={s.devLabel}>開発中</Text>
-          </View>
+          {showHiddenFortunes && (
+            <>
+              {hiddenFortunes.map((f) => (
+                <View key={f.id} style={s.row}>
+                  <Text style={s.label}>{f.name}</Text>
+                  <Switch value={(userConfig.enabledFortunes || ['honDoubutsu']).includes(f.id)} onValueChange={() => toggleFortune(f.id)} />
+                </View>
+              ))}
+              <View style={s.divider} />
+              <View style={s.row}>
+                <Text style={s.label}>顔相</Text>
+                <Text style={s.devLabel}>開発中</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>四柱推命</Text>
+                <Text style={s.devLabel}>開発中</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>手相</Text>
+                <Text style={s.devLabel}>開発中</Text>
+              </View>
+            </>
+          )}
         </View>
 
-        <TouchableOpacity onPress={handleCharTap} style={s.charBottom}>
-          <MyCharacter size={32} />
-        </TouchableOpacity>
         <TouchableOpacity onPress={handleTap} style={s.version}>
           <Text style={s.versionText}>Fortune Calendar v{APP_VERSION}</Text>
         </TouchableOpacity>
@@ -265,9 +272,9 @@ export const SettingsScreen: React.FC = () => {
       <Modal visible={showPicker !== null} transparent animationType="fade">
         <View style={s.modal}>
           <View style={s.pickerBox}>
-            <Text style={s.pickerTitle}>{showPicker === 'year' ? '年' : showPicker === 'month' ? '月' : '日'}を選択</Text>
-            <ScrollView style={s.pickerScroll}>
-              {(showPicker === 'year' ? years : showPicker === 'month' ? months : days).map((v) => (
+            {showPicker && <Text style={s.pickerTitle}>{showPicker === 'year' ? '年' : showPicker === 'month' ? '月' : '日'}を選択</Text>}
+            <ScrollView style={s.pickerScroll} ref={showPicker === 'year' ? yearScrollRef : undefined} onContentSizeChange={showPicker === 'year' ? handleYearScrollLayout : undefined}>
+              {(showPicker === 'year' ? years : showPicker === 'month' ? months : showPicker === 'day' ? days : []).map((v) => (
                 <TouchableOpacity key={v} style={s.pickerItem} onPress={() => {
                   const newY = showPicker === 'year' ? v : birthY;
                   const newM = showPicker === 'month' ? v : birthM;
@@ -330,7 +337,6 @@ const s = StyleSheet.create({
   colorItemText: { fontSize: 10, color: '#666' },
   divider: { height: 1, backgroundColor: '#eee', marginVertical: 8 },
   devLabel: { fontSize: 12, color: '#999', backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  charBottom: { alignItems: 'center', marginTop: 24, opacity: 0.3 },
 });
 
 export default SettingsScreen;

@@ -1,4 +1,4 @@
-// Fortune Calendar v1.4.0x
+// Fortune Calendar v1.4.0y (タブバー調整)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -50,6 +50,7 @@ export default function App() {
           tabBarInactiveTintColor: '#999',
           headerShown: true,
           headerTitleAlign: 'center',
+          tabBarStyle: { paddingBottom: 8, height: 60 },
         }}
       >
         <Tab.Screen

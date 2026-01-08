@@ -1,8 +1,10 @@
-// Fortune Calendar 設定画面 v1.9g (picker閉じ時タイトル非表示)
+// Fortune Calendar 設定画面 v2.0 (MMP拡張対応)
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
+import { ExternalCalendarScreen } from './ExternalCalendarScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
 import { FontSize, DefaultTab } from '../config/types';
@@ -20,6 +22,7 @@ export const SettingsScreen: React.FC = () => {
   const [passcode, setPasscode] = useState('');
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCalendarSettings, setShowCalendarSettings] = useState(false);
 
   // 隠し占いメニュー（名前に9999で表示、0000で非表示）
   const [showHiddenFortunes, setShowHiddenFortunes] = useState(false);
@@ -216,6 +219,14 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        <Text style={s.section}>連携</Text>
+        <View style={s.card}>
+          <TouchableOpacity style={s.linkRow} onPress={() => setShowCalendarSettings(true)}>
+            <Text style={s.label}>📅 外部カレンダー連携</Text>
+            <Text style={s.linkArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={s.section}>占い</Text>
         <View style={s.card}>
           {mainFortune && (
@@ -268,6 +279,9 @@ export const SettingsScreen: React.FC = () => {
       </Modal>
       <Modal visible={showDevSettings} animationType="slide">
         <DevSettingsScreen onClose={() => setShowDevSettings(false)} />
+      </Modal>
+      <Modal visible={showCalendarSettings} animationType="slide">
+        <ExternalCalendarScreen onClose={() => setShowCalendarSettings(false)} />
       </Modal>
       <Modal visible={showColorPicker} transparent animationType="fade">
         <View style={s.modal}>
@@ -353,6 +367,8 @@ const s = StyleSheet.create({
   colorItemText: { fontSize: 10, color: '#666' },
   divider: { height: 1, backgroundColor: '#eee', marginVertical: 8 },
   devLabel: { fontSize: 12, color: '#999', backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  linkArrow: { fontSize: 20, color: '#ccc' },
 });
 
 export default SettingsScreen;

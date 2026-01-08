@@ -319,3 +319,77 @@ export const deleteExternalEventsByAccount = async (accountId: string): Promise<
     console.error('Delete events error:', error);
   }
 };
+
+// =====================
+// 誕生日エントリ
+// =====================
+
+const BIRTHDAY_CACHE_KEY = '@birthday_entries';
+
+/** 誕生日保存 */
+export const saveBirthdayEntries = async (entries: BirthdayEntry[]): Promise<void> => {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem(BIRTHDAY_CACHE_KEY, JSON.stringify(entries));
+    } catch (error) {
+      console.error('Save birthday error:', error);
+    }
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync('DELETE FROM birthday_entries');
+    for (const e of entries) {
+      await db.runAsync(
+        `INSERT INTO birthday_entries (id, contact_id, display_name, birthday_month, birthday_day, birthday_year, imported_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [e.id, e.contactId, e.displayName, e.birthday.month, e.birthday.day, e.birthday.year ?? null, e.importedAt]
+      );
+    }
+  } catch (error) {
+    console.error('Save birthday error:', error);
+  }
+};
+
+/** 誕生日取得 */
+export const getBirthdayEntries = async (): Promise<BirthdayEntry[]> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(BIRTHDAY_CACHE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  if (!db) return [];
+  try {
+    const rows = await db.getAllAsync<any>('SELECT * FROM birthday_entries ORDER BY birthday_month, birthday_day');
+    return rows.map((r: any) => ({
+      id: r.id,
+      contactId: r.contact_id,
+      displayName: r.display_name,
+      birthday: {
+        month: r.birthday_month,
+        day: r.birthday_day,
+        year: r.birthday_year ?? undefined,
+      },
+      importedAt: r.imported_at,
+    }));
+  } catch {
+    return [];
+  }
+};
+
+/** 誕生日全削除 */
+export const clearBirthdayEntries = async (): Promise<void> => {
+  if (Platform.OS === 'web') {
+    localStorage.removeItem(BIRTHDAY_CACHE_KEY);
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync('DELETE FROM birthday_entries');
+  } catch (error) {
+    console.error('Clear birthday error:', error);
+  }
+};

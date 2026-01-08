@@ -1,4 +1,4 @@
-// Fortune Calendar デフォルト設定 v1.0
+// Fortune Calendar デフォルト設定 v1.1 (MMP拡張対応)
 import { DevConfig, UserConfig } from './types';
 
 export const DEFAULT_DEV_CONFIG: DevConfig = {
@@ -51,6 +51,22 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   yearCalendarBestCount: 3,
   showAge: true,
   defaultTab: 'Calendar',  // 起動時デフォルト: 月タブ
+  // MMP拡張設定
+  externalCalendar: {
+    enabled: false,
+    syncInterval: 60,
+    showEventDetails: true,
+  },
+  birthday: {
+    enabled: false,
+    showAge: true,
+    notifyDaysBefore: 0,
+  },
+  mandala: {
+    enabled: false,
+    showOnCalendar: true,
+    defaultTimeframe: 'year',
+  },
 };
 
 /** テーマカラー20色 */

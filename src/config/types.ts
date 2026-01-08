@@ -1,4 +1,6 @@
-// Fortune Calendar 型定義 v1.0
+// Fortune Calendar 型定義 v1.1 (MMP拡張対応)
+
+import { MandalaTimeframe } from '../types/mandala';
 
 /** 開発者設定 */
 export interface DevConfig {
@@ -41,6 +43,27 @@ export type CalendarViewMode = 'month' | 'week' | 'day';
 /** 起動時デフォルトタブ */
 export type DefaultTab = 'Day' | 'Calendar' | 'Year';
 
+/** 外部カレンダー設定 */
+export interface ExternalCalendarConfig {
+  enabled: boolean;
+  syncInterval: number;
+  showEventDetails: boolean;
+}
+
+/** 誕生日設定 */
+export interface BirthdayConfig {
+  enabled: boolean;
+  showAge: boolean;
+  notifyDaysBefore: number;
+}
+
+/** マンダラ設定 */
+export interface MandalaConfig {
+  enabled: boolean;
+  showOnCalendar: boolean;
+  defaultTimeframe: MandalaTimeframe;
+}
+
 /** ユーザー設定 */
 export interface UserConfig {
   userProfile: UserProfile | null;
@@ -59,6 +82,10 @@ export interface UserConfig {
   yearCalendarBestCount: number;  // 年間カレンダーの★表示数(1-5)
   showAge: boolean;  // 年齢を表示
   defaultTab: DefaultTab;  // 起動時デフォルトタブ
+  // MMP拡張設定
+  externalCalendar: ExternalCalendarConfig;
+  birthday: BirthdayConfig;
+  mandala: MandalaConfig;
 }
 
 /** ユーザープロフィール */

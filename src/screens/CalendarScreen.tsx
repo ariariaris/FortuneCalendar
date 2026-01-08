@@ -1,7 +1,7 @@
-// Fortune Calendar カレンダー画面 v2.0 (週表示追加)
+// Fortune Calendar カレンダー画面 v2.4 (今月に戻る追加)
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Platform, Modal, ScrollView } from 'react-native';
-import Constants from 'expo-constants';
+import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { CalendarDay } from '../components/CalendarDay';
@@ -11,6 +11,8 @@ import { MyCharacter } from '../components/MyCharacter';
 import { getSeasonImage } from '../utils/seasonImages';
 import { fetchWeather, DayWeather, getWeatherForDate } from '../services/weatherService';
 import { CalendarViewMode } from '../config/types';
+import { generateMonthlyFortune, generateMonthlyAdvice } from '../services/periodFortuneService';
+import { starsDisplay } from '../utils/fortuneUtils';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -68,6 +70,31 @@ export const CalendarScreen: React.FC = () => {
 
   // 有効な占いの平均スコア計算
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
+  const currentFortune = enabledFortunes[0] || 'honDoubutsu';
+  const profile = userConfig.userProfile || undefined;
+
+  // 月運サマリー計算（複数占術の平均）
+  const monthlyFortune = useMemo(() => {
+    const fortunes = enabledFortunes.filter(id => id !== 'omikuji');
+    if (fortunes.length === 0) return null;
+    const results = fortunes.map(id => generateMonthlyFortune(id, year, month + 1, profile));
+    const avgScores = {
+      love: Math.round(results.reduce((sum, r) => sum + r.scores.love, 0) / results.length),
+      work: Math.round(results.reduce((sum, r) => sum + r.scores.work, 0) / results.length),
+      money: Math.round(results.reduce((sum, r) => sum + r.scores.money, 0) / results.length),
+      health: Math.round(results.reduce((sum, r) => sum + r.scores.health, 0) / results.length),
+      social: Math.round(results.reduce((sum, r) => sum + r.scores.social, 0) / results.length),
+      total: Math.round(results.reduce((sum, r) => sum + r.scores.total, 0) / results.length),
+    };
+    return { ...results[0], scores: avgScores };
+  }, [enabledFortunes, year, month, profile]);
+
+  // 今月のアドバイス
+  const monthlyAdvice = useMemo(() => {
+    if (!monthlyFortune) return '';
+    return generateMonthlyAdvice(monthlyFortune.scores, currentFortune, year, month + 1);
+  }, [monthlyFortune, currentFortune, year, month]);
+
   const monthScores = useMemo(() => {
     const scores: Record<number, number> = {};
     const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
@@ -84,7 +111,7 @@ export const CalendarScreen: React.FC = () => {
   const handleDayPress = (day: number, m?: number, y?: number) => {
     const date = formatDate(new Date(y ?? year, m ?? month, day));
     setSelectedDate(date);
-    navigation.navigate('Fortune');
+    navigation.navigate('Day');
   };
 
   // 週の開始日を取得（日曜始まり）
@@ -158,10 +185,10 @@ export const CalendarScreen: React.FC = () => {
     return weeks;
   };
 
-  const statusBarHeight = Platform.OS === 'ios' ? Constants.statusBarHeight : 0;
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.safeArea, { paddingTop: statusBarHeight }]}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
     <Animated.View style={[s.container, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
       {/* タイトル */}
       <View style={s.titleBar}>
@@ -175,16 +202,28 @@ export const CalendarScreen: React.FC = () => {
         <TouchableOpacity onPress={() => viewMode === 'week' ? navigateWeek(-1) : setViewDate(new Date(year, month - 1, 1))} onLongPress={() => setShowMonthPicker(true)} style={s.navBtn}>
           <Text style={s.navIcon}>‹</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setViewDate(new Date())}>
+        <TouchableOpacity onPress={() => setViewDate(new Date())} style={s.dateCenter}>
           <Text style={s.monthText}>{viewMode === 'week' ? `${viewDate.getMonth() + 1}/${viewDate.getDate()}週` : `${year}年 ${month + 1}月`}</Text>
+          {(year !== new Date().getFullYear() || month !== new Date().getMonth()) && <Text style={s.todayLink}>今月に戻る</Text>}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => viewMode === 'week' ? navigateWeek(1) : setViewDate(new Date(year, month + 1, 1))} onLongPress={() => setShowMonthPicker(true)} style={s.navBtn}>
           <Text style={s.navIcon}>›</Text>
         </TouchableOpacity>
       </View>
+      {/* 月運サマリー */}
+      {monthlyFortune && (
+        <View style={s.monthlyBox}>
+          <View style={s.monthlyHeader}>
+            <Text style={s.monthlyTitle}>{month + 1}月の運勢</Text>
+            <Text style={s.monthlyScore}>{monthlyFortune.scores.total}点</Text>
+            <Text style={s.monthlyStars}>{starsDisplay(monthlyFortune.scores.total)}</Text>
+          </View>
+          <Text style={s.monthlyAdvice}>{monthlyAdvice}</Text>
+        </View>
+      )}
       {/* キャラ＆風物詩 */}
       <View style={s.seasonBox}>
-        <MyCharacter size={80} showName />
+        <MyCharacter size={80} />
         <Image source={getSeasonImage(month + 1)} style={s.seasonImg} resizeMode="contain" />
       </View>
       {/* 曜日 */}
@@ -233,6 +272,14 @@ const s = StyleSheet.create({
   viewToggle: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   viewToggleText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, backgroundColor: '#fff' },
+  dateCenter: { flex: 1, alignItems: 'center' },
+  todayLink: { fontSize: 12, color: '#FF69B4', marginTop: 2 },
+  monthlyBox: { backgroundColor: '#FFF5F8', marginHorizontal: 12, marginTop: 8, borderRadius: 12, padding: 12, borderLeftWidth: 4, borderLeftColor: '#FF69B4' },
+  monthlyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  monthlyTitle: { fontSize: 14, fontWeight: 'bold', color: '#FF69B4' },
+  monthlyScore: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4' },
+  monthlyStars: { fontSize: 14, color: '#FFD700' },
+  monthlyAdvice: { fontSize: 12, color: '#666', marginTop: 4 },
   seasonBox: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
   seasonImg: { width: 80, height: 80 },
   navBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

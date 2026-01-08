@@ -50,6 +50,7 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   },
   yearCalendarBestCount: 3,
   showAge: true,
+  defaultTab: 'Calendar',  // 起動時デフォルト: 月タブ
 };
 
 /** テーマカラー20色 */
@@ -107,4 +108,4 @@ export const FORTUNE_LIST = [
 ] as const;
 
 export const DEV_PASSCODE = '123456';
-export const APP_VERSION = '1.5.0';
+export const APP_VERSION = '1.6.0';

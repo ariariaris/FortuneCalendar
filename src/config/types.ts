@@ -38,6 +38,9 @@ export type FontSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 /** カレンダー表示モード */
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
+/** 起動時デフォルトタブ */
+export type DefaultTab = 'Day' | 'Calendar' | 'Year';
+
 /** ユーザー設定 */
 export interface UserConfig {
   userProfile: UserProfile | null;
@@ -55,6 +58,7 @@ export interface UserConfig {
   weatherConfig: WeatherConfig;
   yearCalendarBestCount: number;  // 年間カレンダーの★表示数(1-5)
   showAge: boolean;  // 年齢を表示
+  defaultTab: DefaultTab;  // 起動時デフォルトタブ
 }
 
 /** ユーザープロフィール */

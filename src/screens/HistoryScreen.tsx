@@ -30,7 +30,7 @@ export const HistoryScreen: React.FC = () => {
   const handleItemPress = (item: FortuneResult) => {
     setSelectedDate(item.date);
     setSelectedFortune(item.fortuneId);
-    navigation.navigate('Fortune');
+    navigation.navigate('Day');
   };
 
   const renderItem = ({ item }: { item: FortuneResult }) => {
@@ -74,7 +74,7 @@ export const HistoryScreen: React.FC = () => {
 
   return (
     <View style={s.container}>
-      <View style={s.header}><MyCharacter size={40} showName /></View>
+      <View style={s.header}><MyCharacter size={40} /></View>
       <FlatList
         data={history}
         renderItem={renderItem}

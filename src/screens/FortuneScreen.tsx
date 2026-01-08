@@ -1,9 +1,10 @@
-// Fortune Calendar 占い結果画面 v1.8 (月運・年運実装)
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+// Fortune Calendar 占い結果画面 v2.2 (複数占術平均点・占術タブ削除)
+import React, { useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
-import { getPlugin, getAllPlugins } from '../fortunes';
-import { FortuneResult } from '../config/types';
+import { getAllPlugins } from '../fortunes';
+import { FortuneScores } from '../config/types';
 import { HexChart } from '../components/HexChart';
 import { LuckyInfo } from '../components/LuckyInfo';
 import { FortuneDetailCards } from '../components/FortuneCard';
@@ -11,21 +12,15 @@ import { displayDateWithDay, parseDate, addDays, formatDate, today } from '../ut
 import { starsDisplay } from '../utils/fortuneUtils';
 import { MyCharacter } from '../components/MyCharacter';
 import { generateDailyAdvice, extractTypeKey } from '../data/adviceParts';
-import { PeriodTabs, FortunePeriod } from '../components/common/PeriodTabs';
-import { generateMonthlyFortune, generateYearlyFortune, getPeriodLabel } from '../services/periodFortuneService';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const FortuneScreen: React.FC = () => {
-  const { selectedFortune, setSelectedFortune, selectedDate, setSelectedDate, userConfig, fortuneCache, setFortuneResult } = useAppStore();
-  const [result, setResult] = useState<FortuneResult | null>(null);
-  const [monthlyResult, setMonthlyResult] = useState<FortuneResult | null>(null);
-  const [yearlyResult, setYearlyResult] = useState<FortuneResult | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<FortunePeriod>('daily');
+  const insets = useSafeAreaInsets();
+  const { selectedDate, setSelectedDate, userConfig } = useAppStore();
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
-  const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
-  const currentFortune = enabledFortunes.includes(selectedFortune) ? selectedFortune : enabledFortunes[0];
+  const profile = userConfig.userProfile || undefined;
 
   // 日付refで最新値を追跡
   const dateRef = useRef(selectedDate);
@@ -55,57 +50,45 @@ export const FortuneScreen: React.FC = () => {
       },
     }), []);
 
-  useEffect(() => {
-    generateFortune();
-  }, [currentFortune, selectedDate, userConfig.userProfile]);
+  // 複数占術の平均スコア計算
+  const result = useMemo(() => {
+    const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
+    if (plugins.length === 0) return null;
 
-  // 月運生成
-  useEffect(() => {
-    if (selectedPeriod === 'monthly' && currentFortune !== 'omikuji') {
-      const date = parseDate(selectedDate);
-      const monthly = generateMonthlyFortune(currentFortune, date.getFullYear(), date.getMonth() + 1, userConfig.userProfile || undefined);
-      setMonthlyResult(monthly);
-    }
-  }, [selectedPeriod, currentFortune, selectedDate, userConfig.userProfile]);
+    const results = plugins.map((p) => p.generate(selectedDate, profile));
+    const avgScores: FortuneScores = {
+      love: Math.round(results.reduce((sum, r) => sum + r.scores.love, 0) / results.length),
+      work: Math.round(results.reduce((sum, r) => sum + r.scores.work, 0) / results.length),
+      money: Math.round(results.reduce((sum, r) => sum + r.scores.money, 0) / results.length),
+      health: Math.round(results.reduce((sum, r) => sum + r.scores.health, 0) / results.length),
+      social: Math.round(results.reduce((sum, r) => sum + r.scores.social, 0) / results.length),
+      total: Math.round(results.reduce((sum, r) => sum + r.scores.total, 0) / results.length),
+    };
 
-  // 年運生成
-  useEffect(() => {
-    if (selectedPeriod === 'yearly' && currentFortune !== 'omikuji') {
-      const date = parseDate(selectedDate);
-      const yearly = generateYearlyFortune(currentFortune, date.getFullYear(), userConfig.userProfile || undefined);
-      setYearlyResult(yearly);
-    }
-  }, [selectedPeriod, currentFortune, selectedDate, userConfig.userProfile]);
-
-  const generateFortune = () => {
-    const plugin = getPlugin(currentFortune);
-    if (!plugin) return;
-
-    const birthDate = userConfig.userProfile?.birthDate || 'default';
-    const cacheKey = `${currentFortune}_${selectedDate}_${birthDate}`;
-    if (fortuneCache[cacheKey]) {
-      setResult(fortuneCache[cacheKey]);
-      return;
-    }
-
-    const fortune = plugin.generate(selectedDate, userConfig.userProfile || undefined);
-    setFortuneResult(cacheKey, fortune);
-    setResult(fortune);
-  };
+    // 詳細テキストは最初の占術のものを使用
+    const baseResult = results[0];
+    return {
+      scores: avgScores,
+      details: baseResult.details,
+      lucky: baseResult.lucky,
+      character: baseResult.character,
+    };
+  }, [enabledFortunes, selectedDate, profile]);
 
   const dateDisplay = displayDateWithDay(parseDate(selectedDate));
 
   // アドバイス生成
   const dailyAdvice = useMemo(() => {
     if (!result) return '';
+    const mainFortune = enabledFortunes[0] || 'honDoubutsu';
     const typeKey = extractTypeKey(
-      currentFortune,
+      mainFortune,
       result.details.total,
       result.character?.name,
       userConfig.userProfile?.bloodType
     );
-    return generateDailyAdvice(currentFortune, typeKey, result.scores.total, selectedDate);
-  }, [result, currentFortune, selectedDate, userConfig.userProfile?.bloodType]);
+    return generateDailyAdvice(mainFortune, typeKey, result.scores.total, selectedDate);
+  }, [result, enabledFortunes, selectedDate, userConfig.userProfile?.bloodType]);
 
   // 日付移動
   const goToPrevDay = () => setSelectedDate(formatDate(addDays(parseDate(selectedDate), -1)));
@@ -116,7 +99,7 @@ export const FortuneScreen: React.FC = () => {
   if (!result) return <View style={s.container}><Text>読み込み中...</Text></View>;
 
   return (
-    <Animated.View style={[s.container, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
+    <Animated.View style={[s.container, { paddingTop: insets.top, transform: [{ translateX }] }]} {...panResponder.panHandlers}>
       <ScrollView contentContainerStyle={s.content}>
         {/* 日付ナビ */}
         <View style={s.dateNav}>
@@ -131,102 +114,33 @@ export const FortuneScreen: React.FC = () => {
             <Text style={s.navBtnText}>▶</Text>
           </TouchableOpacity>
         </View>
-        {plugins.length > 1 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsContainer}>
-            {plugins.map((p) => (
-              <TouchableOpacity key={p.id} style={[s.tab, currentFortune === p.id && s.tabActive]} onPress={() => setSelectedFortune(p.id)}>
-                <Text style={[s.tabText, currentFortune === p.id && s.tabTextActive]}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <Text style={s.fortuneName}>{plugins[0]?.name || '動物占い'}</Text>
-        )}
 
-        {/* 期間タブ（日運/月運/年運） */}
-        <PeriodTabs
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={setSelectedPeriod}
-          disabled={currentFortune === 'omikuji'}
-        />
+        {/* チャート */}
+        <View style={s.chartWrap}>
+          <HexChart scores={result.scores} size={220} />
+        </View>
 
-        {/* 月運コンテンツ */}
-        {selectedPeriod === 'monthly' && monthlyResult && (
-          <>
-            <Text style={s.periodLabel}>{getPeriodLabel('monthly', parseDate(selectedDate))}</Text>
-            <View style={s.chartWrap}>
-              <HexChart scores={monthlyResult.scores} size={220} />
-            </View>
-            <View style={s.totalWrap}>
-              <Text style={s.totalLabel}>今月の総合運</Text>
-              <Text style={s.totalScore}>{monthlyResult.scores.total}点</Text>
-              <Text style={s.totalStars}>{starsDisplay(monthlyResult.scores.total)}</Text>
-              <Text style={s.totalDetail}>{monthlyResult.details.total}</Text>
-            </View>
-            <View style={s.adviceWrap}>
-              <Text style={s.adviceLabel}>今月のアドバイス</Text>
-              <Text style={s.adviceText}>{monthlyResult.details.love}</Text>
-            </View>
-            <LuckyInfo lucky={monthlyResult.lucky} />
-            <Text style={s.sectionTitle}>詳細</Text>
-            <FortuneDetailCards scores={monthlyResult.scores} details={monthlyResult.details} />
-          </>
-        )}
+        {/* キャラクター・総合運 */}
+        <View style={s.totalWrap}>
+          <MyCharacter size={100} />
+          <Text style={s.totalLabel}>総合運</Text>
+          <Text style={s.totalScore}>{result.scores.total}点</Text>
+          <Text style={s.totalStars}>{starsDisplay(result.scores.total)}</Text>
+          <Text style={s.totalDetail}>{result.details.total}</Text>
+        </View>
 
-        {/* 年運コンテンツ */}
-        {selectedPeriod === 'yearly' && yearlyResult && (
-          <>
-            <Text style={s.periodLabel}>{getPeriodLabel('yearly', parseDate(selectedDate))}</Text>
-            <View style={s.chartWrap}>
-              <HexChart scores={yearlyResult.scores} size={220} />
-            </View>
-            <View style={s.totalWrap}>
-              <Text style={s.totalLabel}>今年の総合運</Text>
-              <Text style={s.totalScore}>{yearlyResult.scores.total}点</Text>
-              <Text style={s.totalStars}>{starsDisplay(yearlyResult.scores.total)}</Text>
-              <Text style={s.totalDetail}>{yearlyResult.details.total}</Text>
-            </View>
-            <View style={s.adviceWrap}>
-              <Text style={s.adviceLabel}>今年のアドバイス</Text>
-              <Text style={s.adviceText}>{yearlyResult.details.work}</Text>
-            </View>
-            <LuckyInfo lucky={yearlyResult.lucky} />
-            <Text style={s.sectionTitle}>詳細</Text>
-            <FortuneDetailCards scores={yearlyResult.scores} details={yearlyResult.details} />
-          </>
-        )}
+        {/* 今日のアドバイス */}
+        <View style={s.adviceWrap}>
+          <Text style={s.adviceLabel}>今日のアドバイス</Text>
+          <Text style={s.adviceText}>{dailyAdvice}</Text>
+        </View>
 
-        {/* 日運コンテンツ */}
-        {selectedPeriod === 'daily' && (
-          <>
-            {/* チャート */}
-            <View style={s.chartWrap}>
-              <HexChart scores={result.scores} size={220} />
-            </View>
+        {/* ラッキー情報 */}
+        <LuckyInfo lucky={result.lucky} />
 
-            {/* キャラクター・総合運 */}
-            <View style={s.totalWrap}>
-              <MyCharacter size={100} showName />
-              <Text style={s.totalLabel}>総合運</Text>
-              <Text style={s.totalScore}>{result.scores.total}点</Text>
-              <Text style={s.totalStars}>{starsDisplay(result.scores.total)}</Text>
-              <Text style={s.totalDetail}>{result.details.total}</Text>
-            </View>
-
-            {/* 今日のアドバイス */}
-            <View style={s.adviceWrap}>
-              <Text style={s.adviceLabel}>今日のアドバイス</Text>
-              <Text style={s.adviceText}>{dailyAdvice}</Text>
-            </View>
-
-            {/* ラッキー情報 */}
-            <LuckyInfo lucky={result.lucky} />
-
-            {/* 詳細 */}
-            <Text style={s.sectionTitle}>詳細</Text>
-            <FortuneDetailCards scores={result.scores} details={result.details} />
-          </>
-        )}
+        {/* 詳細 */}
+        <Text style={s.sectionTitle}>詳細</Text>
+        <FortuneDetailCards scores={result.scores} details={result.details} />
       </ScrollView>
     </Animated.View>
   );
@@ -241,7 +155,6 @@ const s = StyleSheet.create({
   dateCenter: { flex: 1, alignItems: 'center' },
   date: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   todayLink: { fontSize: 12, color: '#FF69B4', marginTop: 2 },
-  fortuneName: { fontSize: 14, color: '#FF69B4', fontWeight: '600' },
   chartWrap: { alignItems: 'center', marginVertical: 16 },
   totalWrap: { backgroundColor: '#fff', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 16 },
   totalLabel: { fontSize: 12, color: '#999' },
@@ -252,15 +165,6 @@ const s = StyleSheet.create({
   adviceLabel: { fontSize: 12, color: '#FF69B4', fontWeight: 'bold', marginBottom: 8 },
   adviceText: { fontSize: 14, color: '#333', lineHeight: 22 },
   sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 8 },
-  tabsContainer: { flexDirection: 'row', justifyContent: 'center', flexGrow: 1, marginTop: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderRadius: 16, backgroundColor: '#eee' },
-  tabActive: { backgroundColor: '#FF69B4' },
-  tabText: { fontSize: 14, color: '#666' },
-  tabTextActive: { color: '#fff', fontWeight: 'bold' },
-  comingSoon: { backgroundColor: '#fff', borderRadius: 12, padding: 32, alignItems: 'center', marginVertical: 24 },
-  comingSoonText: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4', marginBottom: 8 },
-  comingSoonSub: { fontSize: 12, color: '#999' },
-  periodLabel: { fontSize: 16, fontWeight: 'bold', color: '#FF69B4', textAlign: 'center', marginBottom: 8 },
 });
 
 export default FortuneScreen;

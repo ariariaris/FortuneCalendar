@@ -5,7 +5,13 @@ import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
-import { FontSize } from '../config/types';
+import { FontSize, DefaultTab } from '../config/types';
+
+const TAB_OPTIONS: { key: DefaultTab; label: string }[] = [
+  { key: 'Day', label: '日' },
+  { key: 'Calendar', label: '月' },
+  { key: 'Year', label: '年' },
+];
 
 export const SettingsScreen: React.FC = () => {
   const { userConfig, setUserConfig, setProfile } = useAppStore();
@@ -87,7 +93,7 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <View style={s.container}>
-      <View style={s.header}><MyCharacter size={40} showName /></View>
+      <View style={s.header}><MyCharacter size={40} /></View>
       <ScrollView style={s.scroll}>
         <Text style={s.section}>プロフィール</Text>
         <View style={s.card}>
@@ -159,6 +165,16 @@ export const SettingsScreen: React.FC = () => {
           <View style={s.row}>
             <Text style={s.label}>星をカラフルに表示</Text>
             <Switch value={userConfig.starColorMode === 'colorful'} onValueChange={(v) => setUserConfig({ starColorMode: v ? 'colorful' : 'simple' })} />
+          </View>
+          <View style={s.row}>
+            <Text style={s.label}>起動時のタブ</Text>
+            <View style={s.btnGroup}>
+              {TAB_OPTIONS.map(({ key, label }) => (
+                <TouchableOpacity key={key} style={[s.btBtn, (userConfig.defaultTab || 'Calendar') === key && s.btBtnActive]} onPress={() => setUserConfig({ defaultTab: key })}>
+                  <Text style={[s.btText, (userConfig.defaultTab || 'Calendar') === key && s.btTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 

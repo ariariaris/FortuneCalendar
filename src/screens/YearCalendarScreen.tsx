@@ -1,11 +1,13 @@
-// Fortune Calendar 年間カレンダー v1.4
+// Fortune Calendar 年間カレンダー v1.8 (今年に戻る追加)
 import React, { useMemo, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions, Platform, Modal } from 'react-native';
-import Constants from 'expo-constants';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { getAllPlugins } from '../fortunes';
 import { formatDate, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateUtils';
+import { generateYearlyFortune, generateYearlyAdvice } from '../services/periodFortuneService';
+import { starsDisplay } from '../utils/fortuneUtils';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -20,9 +22,32 @@ export const YearCalendarScreen: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 41 }, (_, i) => currentYear - 20 + i); // ±20年
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
+  const currentFortune = enabledFortunes[0] || 'honDoubutsu';
   const profile = userConfig.userProfile || undefined;
   const bestCount = userConfig.yearCalendarBestCount || 3;
   const showAge = userConfig.showAge ?? true;
+
+  // 年運サマリー計算（複数占術の平均）
+  const yearlyFortune = useMemo(() => {
+    const fortunes = enabledFortunes.filter(id => id !== 'omikuji');
+    if (fortunes.length === 0) return null;
+    const results = fortunes.map(id => generateYearlyFortune(id, viewYear, profile));
+    const avgScores = {
+      love: Math.round(results.reduce((sum, r) => sum + r.scores.love, 0) / results.length),
+      work: Math.round(results.reduce((sum, r) => sum + r.scores.work, 0) / results.length),
+      money: Math.round(results.reduce((sum, r) => sum + r.scores.money, 0) / results.length),
+      health: Math.round(results.reduce((sum, r) => sum + r.scores.health, 0) / results.length),
+      social: Math.round(results.reduce((sum, r) => sum + r.scores.social, 0) / results.length),
+      total: Math.round(results.reduce((sum, r) => sum + r.scores.total, 0) / results.length),
+    };
+    return { ...results[0], scores: avgScores };
+  }, [enabledFortunes, viewYear, profile]);
+
+  // 今年のアドバイス
+  const yearlyAdvice = useMemo(() => {
+    if (!yearlyFortune) return '';
+    return generateYearlyAdvice(yearlyFortune.scores, currentFortune, viewYear);
+  }, [yearlyFortune, currentFortune, viewYear]);
 
   // 年齢計算
   const getAge = (): number | null => {
@@ -105,10 +130,10 @@ export const YearCalendarScreen: React.FC = () => {
     );
   };
 
-  const statusBarHeight = Platform.OS === 'ios' ? Constants.statusBarHeight : 0;
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[s.safeArea, { paddingTop: statusBarHeight }]}>
+    <View style={[s.safeArea, { paddingTop: insets.top }]}>
     <Animated.View style={[s.container, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
       {/* タイトル */}
       <View style={s.titleBar}>
@@ -117,11 +142,23 @@ export const YearCalendarScreen: React.FC = () => {
       {/* 年ナビ */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => setViewYear(viewYear - 1)} onLongPress={() => setShowYearPicker(true)} style={s.navBtn}><Text style={s.navIcon}>‹</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => setViewYear(new Date().getFullYear())}>
+        <TouchableOpacity onPress={() => setViewYear(new Date().getFullYear())} style={s.dateCenter}>
           <Text style={s.yearText}>{viewYear}年{showAge && age !== null ? `（${age}歳）` : ''}</Text>
+          {viewYear !== new Date().getFullYear() && <Text style={s.todayLink}>今年に戻る</Text>}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setViewYear(viewYear + 1)} onLongPress={() => setShowYearPicker(true)} style={s.navBtn}><Text style={s.navIcon}>›</Text></TouchableOpacity>
       </View>
+      {/* 年運サマリー */}
+      {yearlyFortune && (
+        <View style={s.yearlyBox}>
+          <View style={s.yearlyHeader}>
+            <Text style={s.yearlyTitle}>{viewYear}年の運勢</Text>
+            <Text style={s.yearlyScore}>{yearlyFortune.scores.total}点</Text>
+            <Text style={s.yearlyStars}>{starsDisplay(yearlyFortune.scores.total)}</Text>
+          </View>
+          <Text style={s.yearlyAdvice}>{yearlyAdvice}</Text>
+        </View>
+      )}
       <ScrollView contentContainerStyle={s.grid}>
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(renderMiniMonth)}
       </ScrollView>
@@ -153,7 +190,15 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   titleBar: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
   title: { fontSize: 22, fontWeight: '700', color: '#1C1C1E' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, backgroundColor: '#fff' },
+  dateCenter: { flex: 1, alignItems: 'center' },
+  todayLink: { fontSize: 12, color: '#FF69B4', marginTop: 2 },
+  yearlyBox: { backgroundColor: '#FFF5F8', marginHorizontal: 12, marginVertical: 8, borderRadius: 12, padding: 12, borderLeftWidth: 4, borderLeftColor: '#FF69B4' },
+  yearlyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  yearlyTitle: { fontSize: 14, fontWeight: 'bold', color: '#FF69B4' },
+  yearlyScore: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4' },
+  yearlyStars: { fontSize: 14, color: '#FFD700' },
+  yearlyAdvice: { fontSize: 12, color: '#666', marginTop: 4 },
   navBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   navIcon: { fontSize: 32, color: '#007AFF', fontWeight: '300' },
   yearText: { fontSize: 20, fontWeight: '600', color: '#1C1C1E' },

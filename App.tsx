@@ -1,4 +1,4 @@
-// Fortune Calendar v1.4.0y (タブバー調整)
+// Fortune Calendar v1.6.0 (タブ順序変更・起動時タブ設定)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -30,6 +30,7 @@ const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => (
 
 export default function App() {
   const init = useAppStore((s) => s.init);
+  const userConfig = useAppStore((s) => s.userConfig);
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -40,11 +41,14 @@ export default function App() {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
+  const defaultTab = userConfig.defaultTab || 'Calendar';
+
   return (
     <ErrorBoundary>
     <NavigationContainer>
       <StatusBar style="auto" />
       <Tab.Navigator
+        initialRouteName={defaultTab}
         screenOptions={{
           tabBarActiveTintColor: '#FF69B4',
           tabBarInactiveTintColor: '#999',
@@ -53,6 +57,15 @@ export default function App() {
           tabBarStyle: { paddingBottom: 8, height: 60 },
         }}
       >
+        <Tab.Screen
+          name="Day"
+          component={FortuneScreen}
+          options={{
+            title: '日',
+            headerShown: false,
+            tabBarIcon: ({ focused }) => <TabIcon name="🔮" focused={focused} />,
+          }}
+        />
         <Tab.Screen
           name="Calendar"
           component={CalendarScreen}
@@ -69,14 +82,6 @@ export default function App() {
             title: '年',
             headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name="📆" focused={focused} />,
-          }}
-        />
-        <Tab.Screen
-          name="Fortune"
-          component={FortuneScreen}
-          options={{
-            title: '占い',
-            tabBarIcon: ({ focused }) => <TabIcon name="🔮" focused={focused} />,
           }}
         />
         <Tab.Screen

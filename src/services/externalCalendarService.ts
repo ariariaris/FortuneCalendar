@@ -222,3 +222,110 @@ export const handleCalendarError = (error: CalendarErrorType): { message: string
       return { message: '予期しないエラーが発生しました。', action: 'none' };
   }
 };
+
+// =====================
+// イベント取得・同期
+// =====================
+
+/** 同期範囲の日付を計算 */
+const getSyncDateRange = (): { timeMin: string; timeMax: string } => {
+  const now = new Date();
+  const timeMin = new Date(now.getFullYear(), now.getMonth() - SYNC_CONFIG.pastMonths, 1);
+  const timeMax = new Date(now.getFullYear(), now.getMonth() + SYNC_CONFIG.futureMonths + 1, 0);
+  return {
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+  };
+};
+
+/** Google Calendarイベント取得 */
+export const fetchGoogleCalendarEvents = async (
+  accountId: string
+): Promise<{ events: ExternalCalendarEvent[]; error?: CalendarErrorType }> => {
+  const accessToken = await getValidAccessToken(accountId);
+  if (!accessToken) {
+    return { events: [], error: CalendarErrorType.AUTH_EXPIRED };
+  }
+
+  const { timeMin, timeMax } = getSyncDateRange();
+  const events: ExternalCalendarEvent[] = [];
+
+  try {
+    // カレンダー一覧取得
+    const calListRes = await fetch(
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (calListRes.status === 401) {
+      return { events: [], error: CalendarErrorType.AUTH_EXPIRED };
+    }
+    if (calListRes.status === 429) {
+      return { events: [], error: CalendarErrorType.RATE_LIMITED };
+    }
+    if (!calListRes.ok) {
+      return { events: [], error: CalendarErrorType.UNKNOWN };
+    }
+
+    const calListData = await calListRes.json();
+    const calendars = calListData.items || [];
+
+    // 各カレンダーからイベント取得
+    for (const cal of calendars) {
+      const eventsRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?` +
+        new URLSearchParams({
+          timeMin,
+          timeMax,
+          singleEvents: 'true',
+          orderBy: 'startTime',
+          maxResults: '250',
+        }),
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (!eventsRes.ok) continue;
+
+      const eventsData = await eventsRes.json();
+      for (const item of eventsData.items || []) {
+        if (!item.summary) continue;
+
+        const startTime = item.start?.dateTime || item.start?.date;
+        const endTime = item.end?.dateTime || item.end?.date;
+        if (!startTime || !endTime) continue;
+
+        events.push({
+          id: item.id,
+          accountId,
+          title: item.summary,
+          startTime,
+          endTime,
+          isAllDay: !item.start?.dateTime,
+          location: item.location,
+          description: item.description?.slice(0, SYNC_CONFIG.maxDescriptionLength),
+          calendarName: cal.summary,
+          calendarColor: cal.backgroundColor,
+          syncedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    return { events };
+  } catch {
+    return { events: [], error: CalendarErrorType.NETWORK_ERROR };
+  }
+};
+
+/** 日付でイベントをフィルタ */
+export const getEventsByDate = (events: ExternalCalendarEvent[], date: string): ExternalCalendarEvent[] => {
+  return events.filter((e) => {
+    const eventDate = e.startTime.split('T')[0];
+    return eventDate === date;
+  });
+};
+
+/** 月でイベントをフィルタ */
+export const getEventsByMonth = (events: ExternalCalendarEvent[], year: number, month: number): ExternalCalendarEvent[] => {
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  return events.filter((e) => e.startTime.startsWith(prefix));
+};

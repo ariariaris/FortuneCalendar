@@ -233,3 +233,89 @@ const createMMPTables = async (): Promise<void> => {
     CREATE INDEX IF NOT EXISTS idx_todos_calendar ON mandala_todos(show_on_calendar, deadline);
   `);
 };
+
+// =====================
+// 外部カレンダーイベントキャッシュ
+// =====================
+
+const EVENTS_CACHE_KEY = '@external_events_cache';
+
+/** イベントキャッシュ保存 */
+export const saveExternalEvents = async (events: ExternalCalendarEvent[]): Promise<void> => {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(events));
+    } catch (error) {
+      console.error('Save events error:', error);
+    }
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync('DELETE FROM external_calendar_events');
+    for (const e of events) {
+      await db.runAsync(
+        `INSERT INTO external_calendar_events
+         (id, account_id, title, start_time, end_time, is_all_day, location, description, calendar_name, calendar_color, synced_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [e.id, e.accountId, e.title, e.startTime, e.endTime, e.isAllDay ? 1 : 0, e.location, e.description, e.calendarName, e.calendarColor, e.syncedAt]
+      );
+    }
+  } catch (error) {
+    console.error('Save events error:', error);
+  }
+};
+
+/** イベントキャッシュ取得 */
+export const getExternalEvents = async (): Promise<ExternalCalendarEvent[]> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(EVENTS_CACHE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  if (!db) return [];
+  try {
+    const rows = await db.getAllAsync<any>('SELECT * FROM external_calendar_events ORDER BY start_time');
+    return rows.map((r: any) => ({
+      id: r.id,
+      accountId: r.account_id,
+      title: r.title,
+      startTime: r.start_time,
+      endTime: r.end_time,
+      isAllDay: r.is_all_day === 1,
+      location: r.location,
+      description: r.description,
+      calendarName: r.calendar_name,
+      calendarColor: r.calendar_color,
+      syncedAt: r.synced_at,
+    }));
+  } catch {
+    return [];
+  }
+};
+
+/** イベントキャッシュ削除（アカウント別） */
+export const deleteExternalEventsByAccount = async (accountId: string): Promise<void> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(EVENTS_CACHE_KEY);
+      if (data) {
+        const events: ExternalCalendarEvent[] = JSON.parse(data);
+        const filtered = events.filter((e) => e.accountId !== accountId);
+        localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(filtered));
+      }
+    } catch (error) {
+      console.error('Delete events error:', error);
+    }
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync('DELETE FROM external_calendar_events WHERE account_id = ?', [accountId]);
+  } catch (error) {
+    console.error('Delete events error:', error);
+  }
+};

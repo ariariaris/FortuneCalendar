@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
 import { ExternalCalendarScreen } from './ExternalCalendarScreen';
+import { BirthdayListScreen } from './BirthdayListScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
 import { FontSize, DefaultTab } from '../config/types';
@@ -23,6 +24,7 @@ export const SettingsScreen: React.FC = () => {
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showCalendarSettings, setShowCalendarSettings] = useState(false);
+  const [showBirthdaySettings, setShowBirthdaySettings] = useState(false);
 
   // 隠し占いメニュー（名前に9999で表示、0000で非表示）
   const [showHiddenFortunes, setShowHiddenFortunes] = useState(false);
@@ -225,6 +227,10 @@ export const SettingsScreen: React.FC = () => {
             <Text style={s.label}>📅 外部カレンダー連携</Text>
             <Text style={s.linkArrow}>›</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={s.linkRow} onPress={() => setShowBirthdaySettings(true)}>
+            <Text style={s.label}>🎂 誕生日表示</Text>
+            <Text style={s.linkArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={s.section}>占い</Text>
@@ -282,6 +288,9 @@ export const SettingsScreen: React.FC = () => {
       </Modal>
       <Modal visible={showCalendarSettings} animationType="slide">
         <ExternalCalendarScreen onClose={() => setShowCalendarSettings(false)} />
+      </Modal>
+      <Modal visible={showBirthdaySettings} animationType="slide">
+        <BirthdayListScreen onClose={() => setShowBirthdaySettings(false)} />
       </Modal>
       <Modal visible={showColorPicker} transparent animationType="fade">
         <View style={s.modal}>

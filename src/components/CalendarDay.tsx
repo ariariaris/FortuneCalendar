@@ -1,10 +1,10 @@
-// Fortune Calendar カレンダー日付 v1.6
+// Fortune Calendar カレンダー日付 v1.8 (セル拡大)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
-const SCALE = isTablet ? 1.5 : 1;
+const SCALE = isTablet ? 1.6 : 1.2;
 
 interface WeatherInfo {
   icon?: string;

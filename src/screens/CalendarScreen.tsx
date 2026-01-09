@@ -221,21 +221,23 @@ export const CalendarScreen: React.FC = () => {
           <Text style={s.monthlyAdvice}>{monthlyAdvice}</Text>
         </View>
       )}
-      {/* キャラ＆風物詩 */}
-      <View style={s.seasonBox}>
-        <MyCharacter size={80} />
-        <Image source={getSeasonImage(month + 1)} style={s.seasonImg} resizeMode="contain" />
-      </View>
-      {/* 曜日 */}
-      <View style={s.weekHeader}>
-        {WEEKDAYS.map((d, i) => (
-          <View key={i} style={s.weekCell}>
-            <Text style={[s.weekText, i === 0 && s.sun, i === 6 && s.sat]}>{d}</Text>
-          </View>
-        ))}
-      </View>
-      {/* グリッド */}
-      <View style={s.grid}>{viewMode === 'week' ? renderWeekView() : renderWeeks()}</View>
+      <ScrollView style={s.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* キャラ＆風物詩 */}
+        <View style={s.seasonBox}>
+          <MyCharacter size={80} />
+          <Image source={getSeasonImage(month + 1)} style={s.seasonImg} resizeMode="contain" />
+        </View>
+        {/* 曜日 */}
+        <View style={s.weekHeader}>
+          {WEEKDAYS.map((d, i) => (
+            <View key={i} style={s.weekCell}>
+              <Text style={[s.weekText, i === 0 && s.sun, i === 6 && s.sat]}>{d}</Text>
+            </View>
+          ))}
+        </View>
+        {/* グリッド */}
+        <View style={s.grid}>{viewMode === 'week' ? renderWeekView() : renderWeeks()}</View>
+      </ScrollView>
     </Animated.View>
     {/* 月選択モーダル */}
     <Modal visible={showMonthPicker} transparent animationType="fade">
@@ -280,17 +282,18 @@ const s = StyleSheet.create({
   monthlyScore: { fontSize: 18, fontWeight: 'bold', color: '#FF69B4' },
   monthlyStars: { fontSize: 14, color: '#FFD700' },
   monthlyAdvice: { fontSize: 12, color: '#666', marginTop: 4 },
-  seasonBox: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
+  scrollContainer: { flex: 1 },
+  seasonBox: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, paddingVertical: 12, backgroundColor: '#fff' },
   seasonImg: { width: 80, height: 80 },
   navBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   navIcon: { fontSize: 32, color: '#007AFF', fontWeight: '300' },
   monthText: { fontSize: 20, fontWeight: '600', color: '#1C1C1E' },
-  weekHeader: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
+  weekHeader: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
   weekCell: { flex: 1, alignItems: 'center' },
-  weekText: { fontSize: 13, color: '#8E8E93', fontWeight: '600' },
+  weekText: { fontSize: 15, color: '#8E8E93', fontWeight: '600' },
   sun: { color: '#FF3B30' },
   sat: { color: '#007AFF' },
-  grid: { backgroundColor: '#fff', borderTopWidth: 0.5, borderLeftWidth: 0.5, borderColor: '#E5E5E5' },
+  grid: { backgroundColor: '#fff', borderTopWidth: 0.5, borderLeftWidth: 0.5, borderColor: '#E5E5E5', paddingBottom: 20 },
   week: { flexDirection: 'row' },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   pickerBox: { backgroundColor: '#fff', borderRadius: 12, width: 300, maxHeight: 400 },

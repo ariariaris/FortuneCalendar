@@ -1,4 +1,4 @@
-// Fortune Calendar v1.6.0 (タブ順序変更・起動時タブ設定)
+// Fortune Calendar v3.0 (目標管理システム追加)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { CalendarScreen } from './src/screens/CalendarScreen';
 import { FortuneScreen } from './src/screens/FortuneScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { YearCalendarScreen } from './src/screens/YearCalendarScreen';
+import { GoalManagementScreen } from './src/screens/GoalManagementScreen';
 
 // Error Boundary
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean; error: string}> {
@@ -82,6 +83,15 @@ export default function App() {
             title: '年',
             headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name="📆" focused={focused} />,
+          }}
+        />
+        <Tab.Screen
+          name="Goals"
+          component={GoalManagementScreen}
+          options={{
+            title: '目標',
+            headerShown: false,
+            tabBarIcon: ({ focused }) => <TabIcon name="🎯" focused={focused} />,
           }}
         />
         <Tab.Screen

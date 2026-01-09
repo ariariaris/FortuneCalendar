@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー日付 v1.9 (イベントアイコン追加)
+// Fortune Calendar カレンダー日付 v2.1 (誕生日名前表示)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
@@ -28,6 +28,7 @@ interface Props {
   isWeekView?: boolean;
   // イベントアイコン
   hasBirthday?: boolean;
+  birthdayNames?: string[];
   hasExternal?: boolean;
   hasMandala?: boolean;
 }
@@ -48,7 +49,7 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
   showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, isWeekView,
-  hasBirthday, hasExternal, hasMandala,
+  hasBirthday, birthdayNames, hasExternal, hasMandala,
 }) => {
   if (day === 0) return <View style={s.cell} />;
 
@@ -59,41 +60,48 @@ export const CalendarDay: React.FC<Props> = ({
 
   return (
     <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} activeOpacity={0.6}>
-      <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected, isWeekView && { width: 40 * SCALE, height: 40 * SCALE, borderRadius: 20 * SCALE }]}>
-        <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 17 * SCALE * weekScale }]}>{day}</Text>
+      <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected, isWeekView && { width: 28 * SCALE, height: 28 * SCALE, borderRadius: 14 * SCALE }]}>
+        <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 12 * SCALE * weekScale }]}>{day}</Text>
       </View>
-      {stars && <Text style={[s.stars, { color: stars.color, fontSize: 10 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
-      {hasEvents && (
-        <View style={s.eventIcons}>
-          {hasBirthday && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>🎂</Text>}
-          {hasExternal && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>📅</Text>}
-          {hasMandala && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>🎯</Text>}
+      {stars && <Text style={[s.stars, { color: stars.color, fontSize: 8 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
+      {hasBirthday && birthdayNames && birthdayNames.length > 0 && (
+        <View style={s.birthdayBox}>
+          <Text style={s.birthdayName} numberOfLines={2}>{birthdayNames.join('\n')}</Text>
+          <Text style={s.eventIcon}>🎂</Text>
         </View>
       )}
-      {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 18 * SCALE * weekScale }]}>{weather.icon}</Text>}
+      {(hasExternal || hasMandala) && (
+        <View style={s.eventIcons}>
+          {hasExternal && <Text style={s.eventIcon}>📅</Text>}
+          {hasMandala && <Text style={s.eventIcon}>🎯</Text>}
+        </View>
+      )}
+      {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 16 * SCALE * weekScale }]}>{weather.icon}</Text>}
       {showWeatherTemp && weather?.tempMax !== undefined && (
-        <Text style={[s.temp, { fontSize: 12 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
+        <Text style={[s.temp, { fontSize: 9 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
       )}
       {showWeatherRain && weather?.rainChance !== undefined && weather.rainChance > 0 && (
-        <Text style={[s.rain, { fontSize: 11 * SCALE * weekScale }]}>{weather.rainChance}%</Text>
+        <Text style={[s.rain, { fontSize: 9 * SCALE * weekScale }]}>{weather.rainChance}%</Text>
       )}
     </TouchableOpacity>
   );
 };
 
 const s = StyleSheet.create({
-  cell: { flex: 1, aspectRatio: 0.85, alignItems: 'center', paddingTop: 6 * SCALE, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
-  weekCell: { aspectRatio: 0.6, paddingTop: 12 * SCALE },
-  dayWrap: { width: 32 * SCALE, height: 32 * SCALE, borderRadius: 16 * SCALE, alignItems: 'center', justifyContent: 'center' },
+  cell: { flex: 1, aspectRatio: 0.62, alignItems: 'center', paddingTop: 4 * SCALE, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
+  weekCell: { aspectRatio: 0.50, paddingTop: 8 * SCALE },
+  dayWrap: { width: 20 * SCALE, height: 20 * SCALE, borderRadius: 10 * SCALE, alignItems: 'center', justifyContent: 'center' },
   today: { backgroundColor: '#FF2D55' },
   selected: { backgroundColor: '#007AFF' },
-  dayText: { fontSize: 17 * SCALE, fontWeight: '500' },
-  stars: { fontSize: 8 * SCALE, marginTop: 2, letterSpacing: -1 },
-  eventIcons: { flexDirection: 'row', marginTop: 1 },
-  eventIcon: { fontSize: 10 * SCALE },
-  weatherIcon: { fontSize: 18 * SCALE, marginTop: 2 },
-  temp: { fontSize: 12 * SCALE, color: '#FF6B6B', fontWeight: '600' },
-  rain: { fontSize: 11 * SCALE, color: '#4A90D9' },
+  dayText: { fontSize: 12 * SCALE, fontWeight: '500' },
+  stars: { fontSize: 7 * SCALE, marginTop: 2, letterSpacing: -1 },
+  birthdayBox: { alignItems: 'center', marginTop: 2 },
+  birthdayName: { fontSize: 7 * SCALE, color: '#FF69B4', textAlign: 'center' },
+  eventIcons: { flexDirection: 'row', marginTop: 2 },
+  eventIcon: { fontSize: 9 * SCALE },
+  weatherIcon: { fontSize: 16 * SCALE, marginTop: 3 },
+  temp: { fontSize: 9 * SCALE, color: '#FF6B6B', fontWeight: '600', marginTop: 1 },
+  rain: { fontSize: 9 * SCALE, color: '#4A90D9', marginTop: 1 },
 });
 
 export default CalendarDay;

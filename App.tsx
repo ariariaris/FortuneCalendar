@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0 (目標管理システム追加)
+// Fortune Calendar v3.0b (カレンダーUI改善・連携準備中表示)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';

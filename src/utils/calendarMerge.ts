@@ -99,16 +99,18 @@ export const getDateIcons = (
   externalEvents: ExternalCalendarEvent[],
   birthdays: BirthdayEntry[],
   mandalaTodos: MandalaTodo[]
-): { hasExternal: boolean; hasBirthday: boolean; hasMandala: boolean } => {
+): { hasExternal: boolean; hasBirthday: boolean; hasMandala: boolean; birthdayNames: string[] } => {
   const [, m, d] = date.split('-').map(Number);
 
   const hasExternal = externalEvents.some((e) => e.startTime.split('T')[0] === date);
-  const hasBirthday = birthdays.some((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true));
+  const birthdayEntries = birthdays.filter((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true));
+  const hasBirthday = birthdayEntries.length > 0;
+  const birthdayNames = birthdayEntries.map((b) => b.displayName);
   const hasMandala = mandalaTodos.some(
     (t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted
   );
 
-  return { hasExternal, hasBirthday, hasMandala };
+  return { hasExternal, hasBirthday, hasMandala, birthdayNames };
 };
 
 const formatTime = (isoStr: string): string => {

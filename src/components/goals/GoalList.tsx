@@ -1,10 +1,11 @@
-// Fortune Calendar 目標リスト v1.0
+// Fortune Calendar 目標リスト v1.1 (年齢表示追加)
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Goal, GoalTimeframe, Dream, Purpose } from '../../types/goalManagement';
 import { saveGoal, updateGoal, deleteGoal } from '../../services/goalService';
 import { GoalProgress } from './GoalProgress';
 import { GoalEditModal } from './GoalEditModal';
+import { useAppStore } from '../../store/useAppStore';
 
 interface Props {
   goals: Goal[];
@@ -18,9 +19,20 @@ const TIMEFRAME_LABELS: Record<GoalTimeframe, string> = { year: '今年', '3year
 const STATUS_COLORS: Record<string, string> = { not_started: '#999', in_progress: '#4CAF50', completed: '#2196F3', cancelled: '#f44336' };
 
 export const GoalList: React.FC<Props> = ({ goals, dreams, purposes, onRefresh }) => {
+  const { userConfig } = useAppStore();
   const [selectedTimeframe, setSelectedTimeframe] = useState<GoalTimeframe>('year');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | undefined>();
+
+  // 年齢計算
+  const birthDate = userConfig.userProfile?.birthDate;
+  const birthYear = birthDate ? parseInt(birthDate.split('-')[0]) : null;
+  const currentYear = new Date().getFullYear();
+  const getAgeAtYear = (tf: GoalTimeframe): number | null => {
+    if (!birthYear) return null;
+    const targetYear = currentYear + (tf === 'year' ? 0 : parseInt(tf));
+    return targetYear - birthYear;
+  };
 
   const filteredGoals = goals.filter(g => g.timeframe === selectedTimeframe);
 
@@ -55,11 +67,15 @@ export const GoalList: React.FC<Props> = ({ goals, dreams, purposes, onRefresh }
   return (
     <View style={styles.container}>
       <View style={styles.tabs}>
-        {TIMEFRAMES.map(tf => (
-          <TouchableOpacity key={tf} onPress={() => setSelectedTimeframe(tf)} style={[styles.tab, selectedTimeframe === tf && styles.tabActive]}>
-            <Text style={[styles.tabText, selectedTimeframe === tf && styles.tabTextActive]}>{TIMEFRAME_LABELS[tf]}</Text>
-          </TouchableOpacity>
-        ))}
+        {TIMEFRAMES.map(tf => {
+          const age = getAgeAtYear(tf);
+          return (
+            <TouchableOpacity key={tf} onPress={() => setSelectedTimeframe(tf)} style={[styles.tab, selectedTimeframe === tf && styles.tabActive]}>
+              <Text style={[styles.tabText, selectedTimeframe === tf && styles.tabTextActive]}>{TIMEFRAME_LABELS[tf]}</Text>
+              {age !== null && <Text style={[styles.ageText, selectedTimeframe === tf && styles.ageTextActive]}>{age}才</Text>}
+            </TouchableOpacity>
+          );
+        })}
       </View>
       <ScrollView style={styles.list}>
         <Text style={styles.sectionTitle}>■ {TIMEFRAME_LABELS[selectedTimeframe]}の目標 ({new Date().getFullYear() + (selectedTimeframe === 'year' ? 0 : parseInt(selectedTimeframe))}年)</Text>
@@ -97,10 +113,12 @@ export const GoalList: React.FC<Props> = ({ goals, dreams, purposes, onRefresh }
 const styles = StyleSheet.create({
   container: { flex: 1 },
   tabs: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#f5f5f5' },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6, marginHorizontal: 2 },
+  tab: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 6, marginHorizontal: 2 },
   tabActive: { backgroundColor: '#FF69B4' },
-  tabText: { fontSize: 13, color: '#666' },
+  tabText: { fontSize: 12, color: '#666' },
   tabTextActive: { color: '#fff', fontWeight: '600' },
+  ageText: { fontSize: 10, color: '#999', marginTop: 1 },
+  ageTextActive: { color: '#fff' },
   list: { flex: 1, padding: 16 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#333' },
   emptyText: { color: '#999', textAlign: 'center', marginVertical: 20 },

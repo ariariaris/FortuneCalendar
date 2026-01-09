@@ -129,17 +129,14 @@ export const ExternalCalendarScreen: React.FC<Props> = ({ onClose }) => {
         {/* 新規連携 */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>新規連携</Text>
-          <TouchableOpacity
-            style={[s.connectBtn, { backgroundColor: themeColor }]}
-            onPress={handleConnectGoogle}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={s.connectText}>+ Google Calendarと連携</Text>
-            )}
-          </TouchableOpacity>
+          {/* Google Calendar - 準備中 */}
+          <View style={[s.connectBtn, s.disabledBtn]}>
+            <Text style={s.disabledText}>Google Calendar（準備中）</Text>
+          </View>
+          {/* iCloud Calendar - 準備中 */}
+          <View style={[s.connectBtn, s.disabledBtn, { marginTop: 12 }]}>
+            <Text style={s.disabledText}>iCloud Calendar（準備中）</Text>
+          </View>
         </View>
 
         {/* 注意書き */}
@@ -178,6 +175,8 @@ const s = StyleSheet.create({
   disconnectText: { fontSize: 12, color: '#DC2626' },
   connectBtn: { padding: 16, borderRadius: 12, alignItems: 'center' },
   connectText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  disabledBtn: { backgroundColor: '#CCC' },
+  disabledText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   notice: { flexDirection: 'row', backgroundColor: '#FEF3C7', borderRadius: 12, padding: 16, marginTop: 16 },
   noticeIcon: { fontSize: 16, marginRight: 8 },
   noticeText: { flex: 1, fontSize: 13, color: '#92400E', lineHeight: 20 },

@@ -241,7 +241,7 @@ export const CalendarScreen: React.FC = () => {
         <CalendarDay key={i} day={dayNum} dayOfWeek={i} isToday={checkIsToday(d)}
           isSelected={localSelectedDate === dateStr} score={score} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
-          hasBirthday={icons.hasBirthday} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
+          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           onPress={() => handleDayPress(dayNum, m, y)} isWeekView />
       );
     }
@@ -276,7 +276,7 @@ export const CalendarScreen: React.FC = () => {
         <CalendarDay key={d} day={d} dayOfWeek={dayOfWeek} isToday={checkIsToday(date)}
           isSelected={localSelectedDate === dateStr} score={monthScores[d]} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
-          hasBirthday={icons.hasBirthday} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
+          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           onPress={() => handleDayPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }

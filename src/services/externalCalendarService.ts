@@ -28,8 +28,6 @@ const getGoogleClientId = (): string => {
   }
 };
 
-const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
-
 // セキュアストレージキー
 const TOKEN_STORAGE_KEY = '@calendar_tokens';
 

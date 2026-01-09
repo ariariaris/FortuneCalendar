@@ -233,10 +233,6 @@ export const SettingsScreen: React.FC = () => {
             <Text style={s.label}>🎂 誕生日表示</Text>
             <Text style={s.linkArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.linkRow} onPress={() => setShowMandalaSettings(true)}>
-            <Text style={s.label}>🎯 マンダラチャート</Text>
-            <Text style={s.linkArrow}>›</Text>
-          </TouchableOpacity>
         </View>
 
         <Text style={s.section}>占い</Text>
@@ -256,16 +252,20 @@ export const SettingsScreen: React.FC = () => {
                 </View>
               ))}
               <View style={s.divider} />
+              <TouchableOpacity style={s.linkRow} onPress={() => setShowMandalaSettings(true)}>
+                <Text style={s.label}>🎯 マンダラチャート</Text>
+                <Text style={s.linkArrow}>›</Text>
+              </TouchableOpacity>
+              <View style={s.row}>
+                <Text style={s.label}>手相</Text>
+                <Text style={s.devLabel}>開発中</Text>
+              </View>
               <View style={s.row}>
                 <Text style={s.label}>顔相</Text>
                 <Text style={s.devLabel}>開発中</Text>
               </View>
               <View style={s.row}>
                 <Text style={s.label}>四柱推命</Text>
-                <Text style={s.devLabel}>開発中</Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>手相</Text>
                 <Text style={s.devLabel}>開発中</Text>
               </View>
             </>

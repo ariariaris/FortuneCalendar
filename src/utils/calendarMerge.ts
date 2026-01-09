@@ -45,10 +45,10 @@ export const mergeCalendarItems = (
     });
   }
 
-  // 誕生日
+  // 誕生日（showOnCalendarがtrueのもののみ）
   const [, m, d] = date.split('-').map(Number);
   const birthdaysForDate = birthdays.filter(
-    (b) => b.birthday.month === m && b.birthday.day === d
+    (b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true)
   );
   for (const b of birthdaysForDate) {
     items.push({
@@ -103,7 +103,7 @@ export const getDateIcons = (
   const [, m, d] = date.split('-').map(Number);
 
   const hasExternal = externalEvents.some((e) => e.startTime.split('T')[0] === date);
-  const hasBirthday = birthdays.some((b) => b.birthday.month === m && b.birthday.day === d);
+  const hasBirthday = birthdays.some((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true));
   const hasMandala = mandalaTodos.some(
     (t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted
   );

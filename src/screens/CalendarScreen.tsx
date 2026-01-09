@@ -1,8 +1,8 @@
-// Fortune Calendar カレンダー画面 v2.4 (今月に戻る追加)
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+// Fortune Calendar カレンダー画面 v2.5 (日別スケジュール表示追加)
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { CalendarDay } from '../components/CalendarDay';
 import { getAllPlugins } from '../fortunes';
@@ -13,6 +13,14 @@ import { fetchWeather, DayWeather, getWeatherForDate } from '../services/weather
 import { CalendarViewMode } from '../config/types';
 import { generateMonthlyFortune, generateMonthlyAdvice } from '../services/periodFortuneService';
 import { starsDisplay } from '../utils/fortuneUtils';
+import { getExternalEvents, getBirthdayEntries } from '../services/storageService';
+import { getTodosForCalendar } from '../services/mandalaService';
+import { getTodoItems, getMustDoItems } from '../services/goalService';
+import { ExternalCalendarEvent } from '../types/externalCalendar';
+import { BirthdayEntry } from '../types/birthday';
+import { MandalaTodo } from '../types/mandala';
+import { TodoItem, MustDoItem } from '../types/goalManagement';
+import { getDateIcons } from '../utils/calendarMerge';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -28,6 +36,14 @@ export const CalendarScreen: React.FC = () => {
   const [weather, setWeather] = useState<DayWeather[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const viewMode = userConfig.calendarViewMode || 'month';
+
+  // スケジュール表示用データ
+  const [localSelectedDate, setLocalSelectedDate] = useState(selectedDate || formatDate(new Date()));
+  const [externalEvents, setExternalEvents] = useState<ExternalCalendarEvent[]>([]);
+  const [birthdays, setBirthdays] = useState<BirthdayEntry[]>([]);
+  const [mandalaTodos, setMandalaTodos] = useState<MandalaTodo[]>([]);
+  const [goalTodos, setGoalTodos] = useState<TodoItem[]>([]);
+  const [mustDoItems, setMustDoItems] = useState<MustDoItem[]>([]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -67,6 +83,85 @@ export const CalendarScreen: React.FC = () => {
   useEffect(() => {
     if (wc.enabled) fetchWeather(wc.areaCode).then(setWeather);
   }, [wc.enabled, wc.areaCode]);
+
+  // スケジュールデータ取得
+  const loadScheduleData = useCallback(async () => {
+    const [events, bdays, mTodos, gTodos, mItems] = await Promise.all([
+      getExternalEvents(),
+      getBirthdayEntries(),
+      getTodosForCalendar(),
+      getTodoItems(),
+      getMustDoItems(),
+    ]);
+    setExternalEvents(events);
+    setBirthdays(bdays);
+    setMandalaTodos(mTodos);
+    setGoalTodos(gTodos);
+    setMustDoItems(mItems);
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadScheduleData();
+  }, [loadScheduleData]));
+
+  // 選択日のスケジュールアイテム計算
+  interface ScheduleItem {
+    type: 'external' | 'birthday' | 'mandala' | 'goal' | 'mustdo';
+    icon: string;
+    title: string;
+    time: string;
+    color: string;
+    sortKey: number;
+  }
+
+  const scheduleItems = useMemo((): ScheduleItem[] => {
+    const items: ScheduleItem[] = [];
+    const [, m, d] = localSelectedDate.split('-').map(Number);
+
+    // 外部カレンダーイベント
+    externalEvents
+      .filter(e => e.startTime.split('T')[0] === localSelectedDate)
+      .forEach(e => {
+        let time = '終日';
+        let sortKey = 0;
+        if (!e.isAllDay && e.startTime.includes('T')) {
+          const dt = new Date(e.startTime);
+          time = `${dt.getHours()}:${String(dt.getMinutes()).padStart(2, '0')}`;
+          sortKey = dt.getHours() * 60 + dt.getMinutes();
+        }
+        items.push({ type: 'external', icon: '📅', title: e.title, time, color: e.calendarColor || '#4285F4', sortKey });
+      });
+
+    // 誕生日
+    birthdays
+      .filter(b => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true))
+      .forEach(b => items.push({ type: 'birthday', icon: '🎂', title: `${b.displayName}さんの誕生日`, time: '終日', color: '#FF69B4', sortKey: 0 }));
+
+    // マンダラTodo
+    mandalaTodos
+      .filter(t => t.deadline && t.deadline.startsWith(localSelectedDate) && !t.isCompleted)
+      .forEach(t => items.push({ type: 'mandala', icon: '🎯', title: t.title, time: '終日', color: '#8B5CF6', sortKey: 0 }));
+
+    // 目標管理Todo
+    goalTodos
+      .filter(t => t.date === localSelectedDate && !t.isCompleted)
+      .forEach(t => items.push({ type: 'goal', icon: '✅', title: t.title, time: '終日', color: '#2196F3', sortKey: 0 }));
+
+    // MustDo（期限がこの日のもの）
+    mustDoItems
+      .filter(m => m.deadline === localSelectedDate && m.status !== 'completed')
+      .forEach(m => items.push({ type: 'mustdo', icon: '🔥', title: m.title, time: '終日', color: '#FF9800', sortKey: 0 }));
+
+    // ソート: 時間あり(sortKey>0)を先に、時間順。終日(sortKey=0)は後ろ
+    items.sort((a, b) => {
+      if (a.sortKey > 0 && b.sortKey > 0) return a.sortKey - b.sortKey;
+      if (a.sortKey > 0) return -1;
+      if (b.sortKey > 0) return 1;
+      return 0;
+    });
+
+    return items;
+  }, [localSelectedDate, externalEvents, birthdays, mandalaTodos, goalTodos, mustDoItems]);
 
   // 有効な占いの平均スコア計算
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
@@ -110,7 +205,11 @@ export const CalendarScreen: React.FC = () => {
 
   const handleDayPress = (day: number, m?: number, y?: number) => {
     const date = formatDate(new Date(y ?? year, m ?? month, day));
-    setSelectedDate(date);
+    setLocalSelectedDate(date);
+  };
+
+  const goToDay = () => {
+    setSelectedDate(localSelectedDate);
     navigation.navigate('Day');
   };
 
@@ -137,10 +236,12 @@ export const CalendarScreen: React.FC = () => {
       const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
       const profile = userConfig.userProfile || undefined;
       const score = plugins.length > 0 ? Math.round(plugins.reduce((acc, p) => acc + p.generate(dateStr, profile).scores.total, 0) / plugins.length) : undefined;
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos);
       week.push(
         <CalendarDay key={i} day={dayNum} dayOfWeek={i} isToday={checkIsToday(d)}
-          isSelected={selectedDate === dateStr} score={score} colorful={colorful}
+          isSelected={localSelectedDate === dateStr} score={score} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
+          hasBirthday={icons.hasBirthday} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           onPress={() => handleDayPress(dayNum, m, y)} isWeekView />
       );
     }
@@ -170,10 +271,12 @@ export const CalendarScreen: React.FC = () => {
       const dateStr = formatDate(date);
       const dayOfWeek = (firstDay + d - 1) % 7;
       const dayWeather = wc.enabled ? getWeatherForDate(weather, dateStr) : undefined;
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos);
       week.push(
         <CalendarDay key={d} day={d} dayOfWeek={dayOfWeek} isToday={checkIsToday(date)}
-          isSelected={selectedDate === dateStr} score={monthScores[d]} colorful={colorful}
+          isSelected={localSelectedDate === dateStr} score={monthScores[d]} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
+          hasBirthday={icons.hasBirthday} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           onPress={() => handleDayPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }
@@ -237,6 +340,28 @@ export const CalendarScreen: React.FC = () => {
         </View>
         {/* グリッド */}
         <View style={s.grid}>{viewMode === 'week' ? renderWeekView() : renderWeeks()}</View>
+        {/* 選択日のスケジュール */}
+        <View style={s.scheduleSection}>
+          <View style={s.scheduleHeader}>
+            <Text style={s.scheduleDate}>
+              {parseInt(localSelectedDate.split('-')[1])}月{parseInt(localSelectedDate.split('-')[2])}日の予定
+            </Text>
+            <TouchableOpacity style={[s.detailBtn, { backgroundColor: themeColor }]} onPress={goToDay}>
+              <Text style={s.detailBtnText}>詳細 →</Text>
+            </TouchableOpacity>
+          </View>
+          {scheduleItems.length === 0 ? (
+            <Text style={s.noSchedule}>予定はありません</Text>
+          ) : (
+            scheduleItems.map((item, idx) => (
+              <View key={idx} style={s.scheduleItem}>
+                <Text style={[s.scheduleTime, { color: item.color }]}>{item.time}</Text>
+                <Text style={s.scheduleIcon}>{item.icon}</Text>
+                <Text style={s.scheduleTitle} numberOfLines={1}>{item.title}</Text>
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </Animated.View>
     {/* 月選択モーダル */}
@@ -305,6 +430,17 @@ const s = StyleSheet.create({
   monthBtnActive: { backgroundColor: '#FF69B4', borderRadius: 8 },
   monthBtnText: { fontSize: 14, color: '#333' },
   monthBtnTextActive: { color: '#fff', fontWeight: 'bold' },
+  // スケジュールセクション
+  scheduleSection: { backgroundColor: '#fff', marginHorizontal: 12, marginTop: 12, marginBottom: 20, borderRadius: 12, padding: 12 },
+  scheduleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  scheduleDate: { fontSize: 16, fontWeight: '600', color: '#1C1C1E' },
+  detailBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  detailBtnText: { fontSize: 12, fontWeight: '600', color: '#fff' },
+  noSchedule: { fontSize: 14, color: '#999', textAlign: 'center', paddingVertical: 16 },
+  scheduleItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
+  scheduleTime: { fontSize: 12, fontWeight: '600', width: 50 },
+  scheduleIcon: { fontSize: 16, marginHorizontal: 8 },
+  scheduleTitle: { flex: 1, fontSize: 14, color: '#333' },
 });
 
 export default CalendarScreen;

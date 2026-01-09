@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー日付 v1.8 (セル拡大)
+// Fortune Calendar カレンダー日付 v1.9 (イベントアイコン追加)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
@@ -26,6 +26,10 @@ interface Props {
   showWeatherRain?: boolean;
   onPress: () => void;
   isWeekView?: boolean;
+  // イベントアイコン
+  hasBirthday?: boolean;
+  hasExternal?: boolean;
+  hasMandala?: boolean;
 }
 
 const getColorfulStars = (score: number): { count: number; color: string } => {
@@ -44,12 +48,14 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
   showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, isWeekView,
+  hasBirthday, hasExternal, hasMandala,
 }) => {
   if (day === 0) return <View style={s.cell} />;
 
   const textColor = dayOfWeek === 0 ? '#FF3B30' : dayOfWeek === 6 ? '#007AFF' : '#1C1C1E';
   const stars = score !== undefined ? (colorful ? getColorfulStars(score) : getSimpleStars(score)) : null;
   const weekScale = isWeekView ? 1.3 : 1;
+  const hasEvents = hasBirthday || hasExternal || hasMandala;
 
   return (
     <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} activeOpacity={0.6}>
@@ -57,6 +63,13 @@ export const CalendarDay: React.FC<Props> = ({
         <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 17 * SCALE * weekScale }]}>{day}</Text>
       </View>
       {stars && <Text style={[s.stars, { color: stars.color, fontSize: 10 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
+      {hasEvents && (
+        <View style={s.eventIcons}>
+          {hasBirthday && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>🎂</Text>}
+          {hasExternal && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>📅</Text>}
+          {hasMandala && <Text style={[s.eventIcon, { fontSize: 10 * SCALE }]}>🎯</Text>}
+        </View>
+      )}
       {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 18 * SCALE * weekScale }]}>{weather.icon}</Text>}
       {showWeatherTemp && weather?.tempMax !== undefined && (
         <Text style={[s.temp, { fontSize: 12 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
@@ -75,10 +88,12 @@ const s = StyleSheet.create({
   today: { backgroundColor: '#FF2D55' },
   selected: { backgroundColor: '#007AFF' },
   dayText: { fontSize: 17 * SCALE, fontWeight: '500' },
+  stars: { fontSize: 8 * SCALE, marginTop: 2, letterSpacing: -1 },
+  eventIcons: { flexDirection: 'row', marginTop: 1 },
+  eventIcon: { fontSize: 10 * SCALE },
   weatherIcon: { fontSize: 18 * SCALE, marginTop: 2 },
   temp: { fontSize: 12 * SCALE, color: '#FF6B6B', fontWeight: '600' },
   rain: { fontSize: 11 * SCALE, color: '#4A90D9' },
-  stars: { fontSize: 8 * SCALE, marginTop: 2, letterSpacing: -1 },
 });
 
 export default CalendarDay;

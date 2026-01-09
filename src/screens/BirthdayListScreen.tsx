@@ -1,6 +1,6 @@
-// 誕生日一覧画面 v1.1 (カレンダー表示チェック追加)
+// 誕生日一覧画面 v1.2 (Web版グレーアウト対応)
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
 import { BirthdayEntry, BirthdayDisplayItem } from '../types/birthday';
@@ -26,6 +26,7 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const themeColor = userConfig.themeColor || '#FF69B4';
   const showAge = userConfig.birthday?.showAge ?? true;
+  const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
     loadData();
@@ -102,16 +103,28 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
           <View style={s.permissionBox}>
             <Text style={s.permIcon}>🎂</Text>
             <Text style={s.permTitle}>友人や家族の誕生日をカレンダーに表示できます。</Text>
-            <Text style={s.permDesc}>Fortune Calendarは以下のデータのみ読み取ります:</Text>
-            <Text style={s.permItem}>✅ 名前</Text>
-            <Text style={s.permItem}>✅ 誕生日</Text>
-            <Text style={s.permDesc}>以下のデータは読み取りません:</Text>
-            <Text style={s.permItemNo}>❌ 電話番号</Text>
-            <Text style={s.permItemNo}>❌ メールアドレス</Text>
-            <Text style={s.permItemNo}>❌ 住所</Text>
-            <TouchableOpacity style={[s.permBtn, { backgroundColor: themeColor }]} onPress={handleRequestPermission} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.permBtnText}>連絡先へのアクセスを許可</Text>}
-            </TouchableOpacity>
+            {isWeb ? (
+              <>
+                <Text style={s.permDesc}>Web版では連絡先にアクセスできません。</Text>
+                <Text style={s.permDesc}>iPhoneアプリをご利用ください。</Text>
+                <View style={[s.permBtn, { backgroundColor: '#CCC' }]}>
+                  <Text style={s.permBtnText}>連絡先へのアクセス（利用不可）</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={s.permDesc}>Fortune Calendarは以下のデータのみ読み取ります:</Text>
+                <Text style={s.permItem}>✅ 名前</Text>
+                <Text style={s.permItem}>✅ 誕生日</Text>
+                <Text style={s.permDesc}>以下のデータは読み取りません:</Text>
+                <Text style={s.permItemNo}>❌ 電話番号</Text>
+                <Text style={s.permItemNo}>❌ メールアドレス</Text>
+                <Text style={s.permItemNo}>❌ 住所</Text>
+                <TouchableOpacity style={[s.permBtn, { backgroundColor: themeColor }]} onPress={handleRequestPermission} disabled={loading}>
+                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.permBtnText}>連絡先へのアクセスを許可</Text>}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
@@ -164,9 +177,15 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
 
             <View style={s.footer}>
               <Text style={s.footerText}>全 {entries.length} 件</Text>
-              <TouchableOpacity style={s.syncBtn} onPress={handleSync} disabled={loading}>
-                {loading ? <ActivityIndicator size="small" color={themeColor} /> : <Text style={[s.syncText, { color: themeColor }]}>🔄 連絡先を再読み込み</Text>}
-              </TouchableOpacity>
+              {isWeb ? (
+                <View style={s.syncBtn}>
+                  <Text style={[s.syncText, { color: '#CCC' }]}>🔄 連絡先を再読み込み（利用不可）</Text>
+                </View>
+              ) : (
+                <TouchableOpacity style={s.syncBtn} onPress={handleSync} disabled={loading}>
+                  {loading ? <ActivityIndicator size="small" color={themeColor} /> : <Text style={[s.syncText, { color: themeColor }]}>🔄 連絡先を再読み込み</Text>}
+                </TouchableOpacity>
+              )}
             </View>
           </>
         )}

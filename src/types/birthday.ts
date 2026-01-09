@@ -1,4 +1,4 @@
-// Fortune Calendar 誕生日型定義 v1.0
+// Fortune Calendar 誕生日型定義 v1.1
 
 /** 誕生日エントリ */
 export interface BirthdayEntry {
@@ -11,6 +11,7 @@ export interface BirthdayEntry {
     year?: number;
   };
   importedAt: string;
+  showOnCalendar?: boolean;
 }
 
 /** 誕生日表示アイテム */

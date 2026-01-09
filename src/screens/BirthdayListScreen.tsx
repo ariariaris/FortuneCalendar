@@ -1,4 +1,4 @@
-// 誕生日一覧画面
+// 誕生日一覧画面 v1.1 (カレンダー表示チェック追加)
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import {
   toBirthdayDisplayItems,
   calculateAge,
 } from '../services/birthdayService';
-import { saveBirthdayEntries, getBirthdayEntries, clearBirthdayEntries } from '../services/storageService';
+import { saveBirthdayEntries, getBirthdayEntries } from '../services/storageService';
 
 interface Props {
   onClose?: () => void;
@@ -55,9 +55,10 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
     setLoading(true);
     try {
       const fetched = await fetchBirthdays();
-      await saveBirthdayEntries(fetched);
-      setEntries(fetched);
-      setDisplayItems(toBirthdayDisplayItems(fetched));
+      const withFlag = fetched.map(e => ({ ...e, showOnCalendar: e.showOnCalendar ?? true }));
+      await saveBirthdayEntries(withFlag);
+      setEntries(withFlag);
+      setDisplayItems(toBirthdayDisplayItems(withFlag));
       Alert.alert('取り込み完了', `${fetched.length}件の誕生日を取り込みました`);
     } catch (error) {
       Alert.alert('エラー', '誕生日の取り込みに失敗しました');
@@ -66,6 +67,22 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const toggleEntry = async (id: string) => {
+    const updated = entries.map(e => e.id === id ? { ...e, showOnCalendar: !(e.showOnCalendar ?? true) } : e);
+    setEntries(updated);
+    setDisplayItems(toBirthdayDisplayItems(updated));
+    await saveBirthdayEntries(updated);
+  };
+
+  const toggleAll = async () => {
+    const allChecked = entries.every(e => e.showOnCalendar ?? true);
+    const updated = entries.map(e => ({ ...e, showOnCalendar: !allChecked }));
+    setEntries(updated);
+    setDisplayItems(toBirthdayDisplayItems(updated));
+    await saveBirthdayEntries(updated);
+  };
+
+  const allChecked = entries.length > 0 && entries.every(e => e.showOnCalendar ?? true);
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
 
@@ -101,6 +118,14 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
         {/* 誕生日一覧 */}
         {hasPermission && (
           <>
+            {/* 全員表示チェック */}
+            {entries.length > 0 && (
+              <TouchableOpacity style={s.allCheckRow} onPress={toggleAll}>
+                <Text style={s.checkbox}>{allChecked ? '☑️' : '☐'}</Text>
+                <Text style={s.allCheckText}>カレンダーに全員表示</Text>
+              </TouchableOpacity>
+            )}
+
             {displayItems.filter((i) => i.isThisMonth).length > 0 && (
               <View style={s.section}>
                 <Text style={s.sectionTitle}>今月</Text>
@@ -108,11 +133,11 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
                   <View key={item.date} style={s.dateGroup}>
                     <Text style={s.dateLabel}>{parseInt(item.date.split('-')[0])}月{parseInt(item.date.split('-')[1])}日</Text>
                     {item.entries.map((e) => (
-                      <View key={e.id} style={s.entryRow}>
-                        <Text style={s.entryIcon}>🎂</Text>
+                      <TouchableOpacity key={e.id} style={s.entryRow} onPress={() => toggleEntry(e.id)}>
+                        <Text style={s.checkbox}>{(e.showOnCalendar ?? true) ? '☑️' : '☐'}</Text>
                         <Text style={s.entryName}>{e.displayName}</Text>
                         {showAge && e.birthday.year && <Text style={s.entryAge}>{calculateAge(e.birthday.year)}歳</Text>}
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 ))}
@@ -126,11 +151,11 @@ export const BirthdayListScreen: React.FC<Props> = ({ onClose }) => {
                   <View key={item.date} style={s.dateGroup}>
                     <Text style={s.dateLabel}>{parseInt(item.date.split('-')[0])}月{parseInt(item.date.split('-')[1])}日 (あと{item.daysUntil}日)</Text>
                     {item.entries.map((e) => (
-                      <View key={e.id} style={s.entryRow}>
-                        <Text style={s.entryIcon}>🎂</Text>
+                      <TouchableOpacity key={e.id} style={s.entryRow} onPress={() => toggleEntry(e.id)}>
+                        <Text style={s.checkbox}>{(e.showOnCalendar ?? true) ? '☑️' : '☐'}</Text>
                         <Text style={s.entryName}>{e.displayName}</Text>
                         {showAge && e.birthday.year && <Text style={s.entryAge}>{calculateAge(e.birthday.year)}歳</Text>}
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 ))}
@@ -165,12 +190,14 @@ const s = StyleSheet.create({
   permItemNo: { fontSize: 14, color: '#999' },
   permBtn: { marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   permBtnText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  allCheckRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 16 },
+  checkbox: { fontSize: 18, marginRight: 8 },
+  allCheckText: { fontSize: 14, fontWeight: '600', color: '#333' },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#666', marginBottom: 12 },
   dateGroup: { backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 8 },
   dateLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
-  entryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
-  entryIcon: { fontSize: 14, marginRight: 8 },
+  entryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
   entryName: { flex: 1, fontSize: 14, color: '#333' },
   entryAge: { fontSize: 12, color: '#666' },
   footer: { alignItems: 'center', paddingVertical: 16 },

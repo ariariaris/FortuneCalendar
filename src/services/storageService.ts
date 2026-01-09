@@ -231,6 +231,77 @@ const createMMPTables = async (): Promise<void> => {
       FOREIGN KEY (action_id) REFERENCES mandala_actions(id)
     );
     CREATE INDEX IF NOT EXISTS idx_todos_calendar ON mandala_todos(show_on_calendar, deadline);
+    -- 目標管理: 夢リスト
+    CREATE TABLE IF NOT EXISTS dreams (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      target_year INTEGER NOT NULL,
+      category TEXT,
+      image_url TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    -- 目標管理: 目的
+    CREATE TABLE IF NOT EXISTS purposes (
+      id TEXT PRIMARY KEY,
+      dream_id TEXT,
+      title TEXT NOT NULL,
+      reasons TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (dream_id) REFERENCES dreams(id)
+    );
+    -- 目標管理: 目標
+    CREATE TABLE IF NOT EXISTS goals (
+      id TEXT PRIMARY KEY,
+      dream_id TEXT,
+      purpose_id TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      timeframe TEXT NOT NULL,
+      deadline TEXT,
+      progress INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'not_started',
+      completed_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (dream_id) REFERENCES dreams(id),
+      FOREIGN KEY (purpose_id) REFERENCES purposes(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_goals_timeframe ON goals(timeframe);
+    CREATE INDEX IF NOT EXISTS idx_goals_deadline ON goals(deadline);
+    -- 目標管理: やるべきリスト
+    CREATE TABLE IF NOT EXISTS must_do_items (
+      id TEXT PRIMARY KEY,
+      goal_id TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT DEFAULT 'medium',
+      deadline TEXT NOT NULL,
+      timeframe TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      completed_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (goal_id) REFERENCES goals(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_mustdo_deadline ON must_do_items(deadline);
+    CREATE INDEX IF NOT EXISTS idx_mustdo_priority ON must_do_items(priority);
+    -- 目標管理: Todoリスト
+    CREATE TABLE IF NOT EXISTS todo_items (
+      id TEXT PRIMARY KEY,
+      must_do_id TEXT,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      is_completed INTEGER DEFAULT 0,
+      completed_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (must_do_id) REFERENCES must_do_items(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_todo_date ON todo_items(date);
+    CREATE INDEX IF NOT EXISTS idx_todo_completed ON todo_items(is_completed);
   `);
 };
 

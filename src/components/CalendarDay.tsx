@@ -56,6 +56,7 @@ export const CalendarDay: React.FC<Props> = ({
       <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected, isWeekView && { width: 40 * SCALE, height: 40 * SCALE, borderRadius: 20 * SCALE }]}>
         <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 17 * SCALE * weekScale }]}>{day}</Text>
       </View>
+      {stars && <Text style={[s.stars, { color: stars.color, fontSize: 10 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
       {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 18 * SCALE * weekScale }]}>{weather.icon}</Text>}
       {showWeatherTemp && weather?.tempMax !== undefined && (
         <Text style={[s.temp, { fontSize: 12 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
@@ -63,7 +64,6 @@ export const CalendarDay: React.FC<Props> = ({
       {showWeatherRain && weather?.rainChance !== undefined && weather.rainChance > 0 && (
         <Text style={[s.rain, { fontSize: 11 * SCALE * weekScale }]}>{weather.rainChance}%</Text>
       )}
-      {stars && <Text style={[s.stars, { color: stars.color, fontSize: 10 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
     </TouchableOpacity>
   );
 };

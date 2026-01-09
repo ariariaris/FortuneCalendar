@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0b (カレンダーUI改善・連携準備中表示)
+// Fortune Calendar v3.0c (Web版expo-sqlite問題修正)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';

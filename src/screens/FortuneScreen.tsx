@@ -1,10 +1,11 @@
-// Fortune Calendar 占い結果画面 v2.3 (月画面レイアウト統一)
+// Fortune Calendar 占い結果画面 v2.4 (文字サイズ対応)
 import React, { useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
 import { getAllPlugins } from '../fortunes';
-import { FortuneScores } from '../config/types';
+import { FortuneScores, FontSize } from '../config/types';
+import { getFontSize } from '../utils/fontUtils';
 import { HexChart } from '../components/HexChart';
 import { LuckyInfo } from '../components/LuckyInfo';
 import { FortuneDetailCards } from '../components/FortuneCard';
@@ -23,6 +24,7 @@ export const FortuneScreen: React.FC = () => {
   const { selectedDate, setSelectedDate, userConfig } = useAppStore();
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const profile = userConfig.userProfile || undefined;
+  const fs = userConfig.fontSize || 'md';
 
   // 日付refで最新値を追跡
   const dateRef = useRef(selectedDate);
@@ -115,8 +117,8 @@ export const FortuneScreen: React.FC = () => {
             <Text style={s.navIcon}>‹</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={goToToday} style={s.dateCenter}>
-            <Text style={s.dateText}>{dateDisplay}</Text>
-            {!isCurrentDay && <Text style={s.todayLink}>今日に戻る</Text>}
+            <Text style={[s.dateText, { fontSize: getFontSize(20, fs) }]}>{dateDisplay}</Text>
+            {!isCurrentDay && <Text style={[s.todayLink, { fontSize: getFontSize(12, fs) }]}>今日に戻る</Text>}
           </TouchableOpacity>
           <TouchableOpacity onPress={goToNextDay} style={s.navBtn}>
             <Text style={s.navIcon}>›</Text>
@@ -125,11 +127,11 @@ export const FortuneScreen: React.FC = () => {
         {/* 日運サマリー */}
         <View style={s.dailyBox}>
           <View style={s.dailyHeader}>
-            <Text style={s.dailyTitle}>今日の運勢</Text>
-            <Text style={s.dailyScore}>{result.scores.total}点</Text>
-            <Text style={s.dailyStars}>{starsDisplay(result.scores.total)}</Text>
+            <Text style={[s.dailyTitle, { fontSize: getFontSize(14, fs) }]}>今日の運勢</Text>
+            <Text style={[s.dailyScore, { fontSize: getFontSize(18, fs) }]}>{result.scores.total}点</Text>
+            <Text style={[s.dailyStars, { fontSize: getFontSize(14, fs) }]}>{starsDisplay(result.scores.total)}</Text>
           </View>
-          <Text style={s.dailyAdvice}>{dailyAdvice}</Text>
+          <Text style={[s.dailyAdvice, { fontSize: getFontSize(12, fs) }]}>{dailyAdvice}</Text>
         </View>
         {/* キャラ＆風物詩 */}
         <View style={s.seasonBox}>
@@ -143,13 +145,13 @@ export const FortuneScreen: React.FC = () => {
           </View>
           {/* 総合運詳細 */}
           <View style={s.totalWrap}>
-            <Text style={s.totalLabel}>総合運</Text>
-            <Text style={s.totalDetail}>{result.details.total}</Text>
+            <Text style={[s.totalLabel, { fontSize: getFontSize(12, fs) }]}>総合運</Text>
+            <Text style={[s.totalDetail, { fontSize: getFontSize(14, fs) }]}>{result.details.total}</Text>
           </View>
           {/* ラッキー情報 */}
-          <LuckyInfo lucky={result.lucky} />
+          <LuckyInfo lucky={result.lucky} fontSize={fs} />
           {/* 詳細 */}
-          <Text style={s.sectionTitle}>詳細</Text>
+          <Text style={[s.sectionTitle, { fontSize: getFontSize(14, fs) }]}>詳細</Text>
           <FortuneDetailCards scores={result.scores} details={result.details} />
         </ScrollView>
       </Animated.View>

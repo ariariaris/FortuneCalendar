@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v2.4 (ピッカースクロール位置対応)
+// Fortune Calendar 設定画面 v2.5 (文字サイズ対応)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
@@ -11,6 +11,7 @@ import { MandalaScreen } from './MandalaScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
 import { FontSize, DefaultTab } from '../config/types';
+import { getFontSize } from '../utils/fontUtils';
 
 const TAB_OPTIONS: { key: DefaultTab; label: string }[] = [
   { key: 'Day', label: '日' },
@@ -39,6 +40,7 @@ export const SettingsScreen: React.FC = () => {
 
   const themeColor = userConfig.themeColor || '#FF69B4';
   const fontSize = userConfig.fontSize || 'md';
+  const fs = fontSize;
 
   // プロフィール
   const profile = userConfig.userProfile;
@@ -137,7 +139,7 @@ export const SettingsScreen: React.FC = () => {
     <View style={s.container}>
       <View style={s.header}><MyCharacter size={40} /></View>
       <ScrollView style={s.scroll}>
-        <Text style={s.section}>プロフィール</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>プロフィール</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>お名前</Text>
@@ -173,7 +175,7 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={s.section}>通知</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>通知</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>朝の占いリマインダー</Text>
@@ -181,7 +183,7 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={s.section}>表示</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>表示</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>ダークモード</Text>
@@ -224,7 +226,7 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={s.section}>天気予報</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>天気予報</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>天気を表示</Text>
@@ -260,7 +262,7 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={s.section}>年間カレンダー</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>年間カレンダー</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.label}>年齢を表示</Text>
@@ -278,7 +280,7 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={s.section}>連携</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>連携</Text>
         <View style={s.card}>
           <TouchableOpacity style={s.linkRow} onPress={() => setShowCalendarSettings(true)}>
             <Text style={s.label}>📅 外部カレンダー連携</Text>
@@ -290,7 +292,7 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.section}>占い</Text>
+        <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>占い</Text>
         <View style={s.card}>
           {mainFortune && (
             <View style={s.row}>

@@ -1,4 +1,4 @@
-// Fortune Calendar 年間カレンダー v1.8 (今年に戻る追加)
+// Fortune Calendar 年間カレンダー v1.9 (文字サイズ対応)
 import React, { useMemo, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,8 @@ import { getAllPlugins } from '../fortunes';
 import { formatDate, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateUtils';
 import { generateYearlyFortune, generateYearlyAdvice } from '../services/periodFortuneService';
 import { starsDisplay } from '../utils/fortuneUtils';
+import { getFontSize } from '../utils/fontUtils';
+import { FontSize } from '../config/types';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,6 +28,7 @@ export const YearCalendarScreen: React.FC = () => {
   const profile = userConfig.userProfile || undefined;
   const bestCount = userConfig.yearCalendarBestCount || 3;
   const showAge = userConfig.showAge ?? true;
+  const fs = userConfig.fontSize || 'md';
 
   // 年運サマリー計算（複数占術の平均）
   const yearlyFortune = useMemo(() => {
@@ -143,8 +146,8 @@ export const YearCalendarScreen: React.FC = () => {
       <View style={s.header}>
         <TouchableOpacity onPress={() => setViewYear(viewYear - 1)} onLongPress={() => setShowYearPicker(true)} style={s.navBtn}><Text style={s.navIcon}>‹</Text></TouchableOpacity>
         <TouchableOpacity onPress={() => setViewYear(new Date().getFullYear())} style={s.dateCenter}>
-          <Text style={s.yearText}>{viewYear}年{showAge && age !== null ? `（${age}歳）` : ''}</Text>
-          {viewYear !== new Date().getFullYear() && <Text style={s.todayLink}>今年に戻る</Text>}
+          <Text style={[s.yearText, { fontSize: getFontSize(20, fs) }]}>{viewYear}年{showAge && age !== null ? `（${age}歳）` : ''}</Text>
+          {viewYear !== new Date().getFullYear() && <Text style={[s.todayLink, { fontSize: getFontSize(12, fs) }]}>今年に戻る</Text>}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setViewYear(viewYear + 1)} onLongPress={() => setShowYearPicker(true)} style={s.navBtn}><Text style={s.navIcon}>›</Text></TouchableOpacity>
       </View>
@@ -152,11 +155,11 @@ export const YearCalendarScreen: React.FC = () => {
       {yearlyFortune && (
         <View style={s.yearlyBox}>
           <View style={s.yearlyHeader}>
-            <Text style={s.yearlyTitle}>{viewYear}年の運勢</Text>
-            <Text style={s.yearlyScore}>{yearlyFortune.scores.total}点</Text>
-            <Text style={s.yearlyStars}>{starsDisplay(yearlyFortune.scores.total)}</Text>
+            <Text style={[s.yearlyTitle, { fontSize: getFontSize(14, fs) }]}>{viewYear}年の運勢</Text>
+            <Text style={[s.yearlyScore, { fontSize: getFontSize(18, fs) }]}>{yearlyFortune.scores.total}点</Text>
+            <Text style={[s.yearlyStars, { fontSize: getFontSize(14, fs) }]}>{starsDisplay(yearlyFortune.scores.total)}</Text>
           </View>
-          <Text style={s.yearlyAdvice}>{yearlyAdvice}</Text>
+          <Text style={[s.yearlyAdvice, { fontSize: getFontSize(12, fs) }]}>{yearlyAdvice}</Text>
         </View>
       )}
       <ScrollView contentContainerStyle={s.grid}>

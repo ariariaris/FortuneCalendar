@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v2.7 (Open-Meteo対応)
+// Fortune Calendar カレンダー画面 v2.8 (文字サイズ対応)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,8 @@ import { formatDate, getDaysInMonth, getFirstDayOfMonth, isToday as checkIsToday
 import { MyCharacter } from '../components/MyCharacter';
 import { getSeasonImage } from '../utils/seasonImages';
 import { fetchWeather, DayWeather, getWeatherForDate } from '../services/weatherService';
-import { CalendarViewMode } from '../config/types';
+import { CalendarViewMode, FontSize } from '../config/types';
+import { getFontSize } from '../utils/fontUtils';
 import { generateMonthlyFortune, generateMonthlyAdvice } from '../services/periodFortuneService';
 import { starsDisplay } from '../utils/fortuneUtils';
 import { getExternalEvents, getBirthdayEntries } from '../services/storageService';
@@ -33,6 +34,7 @@ export const CalendarScreen: React.FC = () => {
   const colorful = userConfig.starColorMode === 'colorful';
   const wc = userConfig.weatherConfig || { enabled: false, showIcon: true, showTemp: true, showRain: true, areaCode: '130000' };
   const themeColor = userConfig.themeColor || '#FF69B4';
+  const fs = userConfig.fontSize || 'md';
   const [viewDate, setViewDate] = useState(new Date());
   const [weather, setWeather] = useState<DayWeather[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -328,8 +330,8 @@ export const CalendarScreen: React.FC = () => {
           <Text style={s.navIcon}>‹</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setViewDate(new Date())} style={s.dateCenter}>
-          <Text style={s.monthText}>{viewMode === 'week' ? `${viewDate.getMonth() + 1}/${viewDate.getDate()}週` : `${year}年 ${month + 1}月`}</Text>
-          {(year !== new Date().getFullYear() || month !== new Date().getMonth()) && <Text style={s.todayLink}>今月に戻る</Text>}
+          <Text style={[s.monthText, { fontSize: getFontSize(20, fs) }]}>{viewMode === 'week' ? `${viewDate.getMonth() + 1}/${viewDate.getDate()}週` : `${year}年 ${month + 1}月`}</Text>
+          {(year !== new Date().getFullYear() || month !== new Date().getMonth()) && <Text style={[s.todayLink, { fontSize: getFontSize(12, fs) }]}>今月に戻る</Text>}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => viewMode === 'week' ? navigateWeek(1) : setViewDate(new Date(year, month + 1, 1))} onLongPress={() => setShowMonthPicker(true)} style={s.navBtn}>
           <Text style={s.navIcon}>›</Text>
@@ -339,11 +341,11 @@ export const CalendarScreen: React.FC = () => {
       {monthlyFortune && (
         <View style={s.monthlyBox}>
           <View style={s.monthlyHeader}>
-            <Text style={s.monthlyTitle}>{month + 1}月の運勢</Text>
-            <Text style={s.monthlyScore}>{monthlyFortune.scores.total}点</Text>
-            <Text style={s.monthlyStars}>{starsDisplay(monthlyFortune.scores.total)}</Text>
+            <Text style={[s.monthlyTitle, { fontSize: getFontSize(14, fs) }]}>{month + 1}月の運勢</Text>
+            <Text style={[s.monthlyScore, { fontSize: getFontSize(18, fs) }]}>{monthlyFortune.scores.total}点</Text>
+            <Text style={[s.monthlyStars, { fontSize: getFontSize(14, fs) }]}>{starsDisplay(monthlyFortune.scores.total)}</Text>
           </View>
-          <Text style={s.monthlyAdvice}>{monthlyAdvice}</Text>
+          <Text style={[s.monthlyAdvice, { fontSize: getFontSize(12, fs) }]}>{monthlyAdvice}</Text>
         </View>
       )}
       <ScrollView style={s.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -365,21 +367,21 @@ export const CalendarScreen: React.FC = () => {
         {/* 選択日のスケジュール */}
         <View style={s.scheduleSection}>
           <View style={s.scheduleHeader}>
-            <Text style={s.scheduleDate}>
+            <Text style={[s.scheduleDate, { fontSize: getFontSize(16, fs) }]}>
               {parseInt(localSelectedDate.split('-')[1])}月{parseInt(localSelectedDate.split('-')[2])}日の予定
             </Text>
             <TouchableOpacity style={[s.detailBtn, { backgroundColor: themeColor }]} onPress={goToDay}>
-              <Text style={s.detailBtnText}>詳細 →</Text>
+              <Text style={[s.detailBtnText, { fontSize: getFontSize(12, fs) }]}>詳細 →</Text>
             </TouchableOpacity>
           </View>
           {scheduleItems.length === 0 ? (
-            <Text style={s.noSchedule}>予定はありません</Text>
+            <Text style={[s.noSchedule, { fontSize: getFontSize(14, fs) }]}>予定はありません</Text>
           ) : (
             scheduleItems.map((item, idx) => (
               <View key={idx} style={s.scheduleItem}>
-                <Text style={[s.scheduleTime, { color: item.color }]}>{item.time}</Text>
-                <Text style={s.scheduleIcon}>{item.icon}</Text>
-                <Text style={s.scheduleTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={[s.scheduleTime, { color: item.color, fontSize: getFontSize(12, fs) }]}>{item.time}</Text>
+                <Text style={[s.scheduleIcon, { fontSize: getFontSize(16, fs) }]}>{item.icon}</Text>
+                <Text style={[s.scheduleTitle, { fontSize: getFontSize(14, fs) }]} numberOfLines={1}>{item.title}</Text>
               </View>
             ))
           )}

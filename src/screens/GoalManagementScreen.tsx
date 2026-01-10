@@ -1,4 +1,4 @@
-// Fortune Calendar 目標管理画面 v1.1 (目的タブ削除・4タブ化)
+// Fortune Calendar 目標管理画面 v1.2 (文字サイズ対応)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { Dream, Purpose, Goal, MustDoItem, TodoItem } from '../types/goalManagement';
@@ -7,6 +7,8 @@ import { DreamList } from '../components/goals/DreamList';
 import { GoalList } from '../components/goals/GoalList';
 import { MustDoList } from '../components/goals/MustDoList';
 import { TodoList } from '../components/goals/TodoList';
+import { useAppStore } from '../store/useAppStore';
+import { getFontSize } from '../utils/fontUtils';
 
 type TabType = 'dream' | 'goal' | 'mustdo' | 'todo';
 
@@ -18,6 +20,8 @@ const TABS: { key: TabType; label: string; color: string }[] = [
 ];
 
 export const GoalManagementScreen: React.FC = () => {
+  const { userConfig } = useAppStore();
+  const fs = userConfig.fontSize || 'md';
   const [activeTab, setActiveTab] = useState<TabType>('goal');
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [purposes, setPurposes] = useState<Purpose[]>([]);
@@ -55,7 +59,7 @@ export const GoalManagementScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>目標管理</Text>
+        <Text style={[styles.title, { fontSize: getFontSize(20, fs) }]}>目標管理</Text>
       </View>
       <View style={styles.tabs}>
         {TABS.map(tab => (
@@ -64,7 +68,7 @@ export const GoalManagementScreen: React.FC = () => {
             onPress={() => setActiveTab(tab.key)}
             style={[styles.tab, activeTab === tab.key && { backgroundColor: tab.color }]}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+            <Text style={[styles.tabText, { fontSize: getFontSize(13, fs) }, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>

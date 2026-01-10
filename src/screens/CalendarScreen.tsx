@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v2.6 (夢・目標アイコン対応)
+// Fortune Calendar カレンダー画面 v2.7 (Open-Meteo対応)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import { BirthdayEntry } from '../types/birthday';
 import { MandalaTodo } from '../types/mandala';
 import { TodoItem, MustDoItem, Dream, Goal } from '../types/goalManagement';
 import { getDateIcons } from '../utils/calendarMerge';
+import { getAreaByCode } from '../config/areaCode';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -81,9 +82,12 @@ export const CalendarScreen: React.FC = () => {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
 
-  // 天気取得
+  // 天気取得（Open-Meteo API対応）
   useEffect(() => {
-    if (wc.enabled) fetchWeather(wc.areaCode).then(setWeather);
+    if (wc.enabled) {
+      const area = getAreaByCode(wc.areaCode);
+      fetchWeather(wc.areaCode, area?.lat, area?.lon).then(setWeather);
+    }
   }, [wc.enabled, wc.areaCode]);
 
   // スケジュールデータ取得

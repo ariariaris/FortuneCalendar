@@ -1,41 +1,45 @@
-// 天気予報サービス v1.0 - 気象庁API
+// 天気予報サービス v2.0 - Open-Meteo API対応
 export interface DayWeather {
-  date: string;        // YYYY-MM-DD
-  weatherCode: string; // 気象庁天気コード
-  icon: string;        // アイコン絵文字
+  date: string;
+  icon: string;
   tempMax?: number;
   tempMin?: number;
-  rainChance?: number; // 降水確率(%)
+  rainChance?: number;
 }
 
-// 天気コード→アイコンマッピング
-const WEATHER_ICONS: Record<string, string> = {
-  '100': '☀️', '101': '🌤️', '102': '🌤️', '103': '🌤️', '104': '🌤️',
-  '110': '🌤️', '111': '🌤️', '112': '🌤️', '113': '🌤️',
-  '200': '☁️', '201': '☁️', '202': '☁️', '203': '☁️', '204': '☁️',
-  '210': '☁️', '211': '☁️', '212': '☁️', '213': '☁️',
-  '300': '🌧️', '301': '🌧️', '302': '🌧️', '303': '🌧️',
-  '311': '🌧️', '313': '🌧️', '314': '🌧️',
-  '400': '🌨️', '401': '🌨️', '402': '🌨️', '403': '🌨️',
-  '411': '🌨️', '413': '🌨️', '414': '🌨️',
+// WMOコード→アイコン
+const WMO_ICONS: Record<number, string> = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌧️', 53: '🌧️', 55: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  71: '🌨️', 73: '🌨️', 75: '🌨️',
+  80: '🌧️', 81: '🌧️', 82: '🌧️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️',
 };
-const getIcon = (code: string): string => WEATHER_ICONS[code] || '❓';
+const getIcon = (code: number): string => WMO_ICONS[code] || '❓';
 
-let weatherCache: { data: DayWeather[]; fetchedAt: number; areaCode: string } | null = null;
-const CACHE_TTL = 3 * 60 * 60 * 1000; // 3時間
+let weatherCache: { data: DayWeather[]; fetchedAt: number; key: string } | null = null;
+const CACHE_TTL = 60 * 60 * 1000; // 1時間
 
-/** 天気予報取得（気象庁API） */
-export const fetchWeather = async (areaCode: string): Promise<DayWeather[]> => {
-  // キャッシュ有効なら返す
-  if (weatherCache && weatherCache.areaCode === areaCode && Date.now() - weatherCache.fetchedAt < CACHE_TTL) {
+/** Open-Meteo API で天気取得 */
+export const fetchWeather = async (areaCode: string, lat?: number, lon?: number): Promise<DayWeather[]> => {
+  // 緯度経度が指定されていない場合はデフォルト（東京）
+  const latitude = lat ?? 35.69;
+  const longitude = lon ?? 139.69;
+  const cacheKey = `${latitude.toFixed(2)}_${longitude.toFixed(2)}`;
+
+  if (weatherCache && weatherCache.key === cacheKey && Date.now() - weatherCache.fetchedAt < CACHE_TTL) {
     return weatherCache.data;
   }
+
   try {
-    const res = await fetch(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Tokyo&forecast_days=7`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('API Error');
     const json = await res.json();
-    const result = parseJmaResponse(json);
-    weatherCache = { data: result, fetchedAt: Date.now(), areaCode };
+    const result = parseOpenMeteoResponse(json);
+    weatherCache = { data: result, fetchedAt: Date.now(), key: cacheKey };
     return result;
   } catch (e) {
     console.error('Weather fetch error:', e);
@@ -43,40 +47,24 @@ export const fetchWeather = async (areaCode: string): Promise<DayWeather[]> => {
   }
 };
 
-/** 気象庁JSONパース */
-const parseJmaResponse = (json: any): DayWeather[] => {
+const parseOpenMeteoResponse = (json: any): DayWeather[] => {
   const results: DayWeather[] = [];
-  const ts = json[0]?.timeSeries;
-  if (!ts || ts.length < 2) return results;
+  const daily = json.daily;
+  if (!daily) return results;
 
-  // 天気コード取得
-  const weatherTs = ts[0];
-  const dates = weatherTs.timeDefines?.map((d: string) => d.split('T')[0]) || [];
-  const codes = weatherTs.areas?.[0]?.weatherCodes || [];
+  const dates = daily.time || [];
+  const codes = daily.weather_code || [];
+  const maxTemps = daily.temperature_2m_max || [];
+  const minTemps = daily.temperature_2m_min || [];
+  const rainProbs = daily.precipitation_probability_max || [];
 
-  // 気温取得（別timeSeries）
-  const tempTs = ts[2];
-  const tempDates = tempTs?.timeDefines?.map((d: string) => d.split('T')[0]) || [];
-  const temps = tempTs?.areas?.[0]?.temps || [];
-
-  // 降水確率取得
-  const popTs = ts[1];
-  const popDates = popTs?.timeDefines?.map((d: string) => d.split('T')[0]) || [];
-  const pops = popTs?.areas?.[0]?.pops || [];
-
-  for (let i = 0; i < dates.length && i < 3; i++) {
-    const date = dates[i];
-    const code = codes[i] || '100';
-    const tempIdx = tempDates.indexOf(date);
-    const popIdx = popDates.findIndex((d: string) => d === date);
-
+  for (let i = 0; i < Math.min(dates.length, 7); i++) {
     results.push({
-      date,
-      weatherCode: code,
-      icon: getIcon(code),
-      tempMax: tempIdx >= 0 && temps[tempIdx * 2 + 1] ? parseInt(temps[tempIdx * 2 + 1]) : undefined,
-      tempMin: tempIdx >= 0 && temps[tempIdx * 2] ? parseInt(temps[tempIdx * 2]) : undefined,
-      rainChance: popIdx >= 0 && pops[popIdx] ? parseInt(pops[popIdx]) : undefined,
+      date: dates[i],
+      icon: getIcon(codes[i] ?? 0),
+      tempMax: maxTemps[i] !== undefined ? Math.round(maxTemps[i]) : undefined,
+      tempMin: minTemps[i] !== undefined ? Math.round(minTemps[i]) : undefined,
+      rainChance: rainProbs[i] ?? undefined,
     });
   }
   return results;

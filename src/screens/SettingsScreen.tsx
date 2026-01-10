@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v2.3 (年ピッカーWeb対応)
+// Fortune Calendar 設定画面 v2.4 (ピッカースクロール位置対応)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
@@ -85,8 +85,10 @@ export const SettingsScreen: React.FC = () => {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const yearScrollRef = useRef<ScrollView>(null);
+  const prefScrollRef = useRef<ScrollView>(null);
   const targetYear = currentYear - defaultAge;
   const targetYearIndex = years.indexOf(targetYear);
+  const targetPrefIndex = PREFECTURES.findIndex(p => p.code === (currentPref?.code || '13'));
 
   // Web対応: 年ピッカー開いたらsetTimeoutでスクロール
   useEffect(() => {
@@ -96,6 +98,15 @@ export const SettingsScreen: React.FC = () => {
       }, 50);
     }
   }, [showPicker, targetYearIndex]);
+
+  // Web対応: 都道府県ピッカー開いたらsetTimeoutでスクロール
+  useEffect(() => {
+    if (showPrefPicker) {
+      setTimeout(() => {
+        prefScrollRef.current?.scrollTo({ y: targetPrefIndex * 49, animated: false });
+      }, 50);
+    }
+  }, [showPrefPicker, targetPrefIndex]);
 
   // 現在地取得
   const handleGetLocation = async () => {
@@ -349,7 +360,7 @@ export const SettingsScreen: React.FC = () => {
         <View style={s.modal}>
           <View style={s.pickerBox}>
             <Text style={s.pickerTitle}>都道府県を選択</Text>
-            <ScrollView style={s.pickerScroll}>
+            <ScrollView style={s.pickerScroll} ref={prefScrollRef}>
               {PREFECTURES.map((pref) => (
                 <TouchableOpacity key={pref.code} style={[s.pickerItem, currentPref?.code === pref.code && s.pickerItemActive]}
                   onPress={() => { setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, areaCode: pref.areas[0].code } }); setShowPrefPicker(false); }}>

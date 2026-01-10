@@ -1,5 +1,5 @@
-// Fortune Calendar 設定画面 v2.2 (3ボタン地域選択)
-import React, { useState, useRef } from 'react';
+// Fortune Calendar 設定画面 v2.3 (年ピッカーWeb対応)
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
 import { useNavigation } from '@react-navigation/native';
@@ -88,11 +88,14 @@ export const SettingsScreen: React.FC = () => {
   const targetYear = currentYear - defaultAge;
   const targetYearIndex = years.indexOf(targetYear);
 
-  const handleYearScrollLayout = () => {
+  // Web対応: 年ピッカー開いたらsetTimeoutでスクロール
+  useEffect(() => {
     if (showPicker === 'year') {
-      yearScrollRef.current?.scrollTo({ y: targetYearIndex * 49, animated: false });
+      setTimeout(() => {
+        yearScrollRef.current?.scrollTo({ y: targetYearIndex * 49, animated: false });
+      }, 50);
     }
-  };
+  }, [showPicker, targetYearIndex]);
 
   // 現在地取得
   const handleGetLocation = async () => {
@@ -394,7 +397,7 @@ export const SettingsScreen: React.FC = () => {
         <View style={s.modal}>
           <View style={s.pickerBox}>
             {showPicker && <Text style={s.pickerTitle}>{showPicker === 'year' ? '年' : showPicker === 'month' ? '月' : '日'}を選択</Text>}
-            <ScrollView style={s.pickerScroll} ref={showPicker === 'year' ? yearScrollRef : undefined} onContentSizeChange={showPicker === 'year' ? handleYearScrollLayout : undefined}>
+            <ScrollView style={s.pickerScroll} ref={showPicker === 'year' ? yearScrollRef : undefined}>
               {(showPicker === 'year' ? years : showPicker === 'month' ? months : showPicker === 'day' ? days : []).map((v) => (
                 <TouchableOpacity key={v} style={s.pickerItem} onPress={() => {
                   const newY = showPicker === 'year' ? v : birthY;

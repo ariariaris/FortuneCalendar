@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v2.5 (文字サイズ対応)
+// Fortune Calendar 設定画面 v2.6 (文字サイズ無効化)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
@@ -196,15 +196,9 @@ export const SettingsScreen: React.FC = () => {
               <Text style={s.colorName}>{THEME_COLORS.find(c => c.color === themeColor)?.name || 'ピンク'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.row}>
+          <View style={[s.row, { opacity: 0.4 }]}>
             <Text style={s.label}>文字サイズ</Text>
-            <View style={s.btnGroup}>
-              {(Object.keys(FONT_SIZES) as FontSize[]).map((key) => (
-                <TouchableOpacity key={key} style={[s.btBtn, fontSize === key && { backgroundColor: themeColor }]} onPress={() => setUserConfig({ fontSize: key })}>
-                  <Text style={[s.btText, fontSize === key && s.btTextActive]}>{FONT_SIZES[key].label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={s.devLabel}>開発中</Text>
           </View>
           <View style={s.row}>
             <Text style={s.label}>星をカラフルに表示</Text>

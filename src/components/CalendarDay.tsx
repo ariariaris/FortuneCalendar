@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー日付 v2.1 (誕生日名前表示)
+// Fortune Calendar カレンダー日付 v2.2 (夢・目標アイコン対応)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
@@ -31,6 +31,11 @@ interface Props {
   birthdayNames?: string[];
   hasExternal?: boolean;
   hasMandala?: boolean;
+  // 目標管理アイコン
+  hasDream?: boolean;
+  hasGoal?: boolean;
+  hasMustDo?: boolean;
+  hasTodo?: boolean;
 }
 
 const getColorfulStars = (score: number): { count: number; color: string } => {
@@ -49,14 +54,14 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
   showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, isWeekView,
-  hasBirthday, birthdayNames, hasExternal, hasMandala,
+  hasBirthday, birthdayNames, hasExternal, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo,
 }) => {
   if (day === 0) return <View style={s.cell} />;
 
   const textColor = dayOfWeek === 0 ? '#FF3B30' : dayOfWeek === 6 ? '#007AFF' : '#1C1C1E';
   const stars = score !== undefined ? (colorful ? getColorfulStars(score) : getSimpleStars(score)) : null;
   const weekScale = isWeekView ? 1.3 : 1;
-  const hasEvents = hasBirthday || hasExternal || hasMandala;
+  const hasGoalItems = hasDream || hasGoal || hasMustDo || hasTodo;
 
   return (
     <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} activeOpacity={0.6}>
@@ -70,10 +75,14 @@ export const CalendarDay: React.FC<Props> = ({
           <Text style={s.eventIcon}>🎂</Text>
         </View>
       )}
-      {(hasExternal || hasMandala) && (
+      {(hasExternal || hasMandala || hasGoalItems) && (
         <View style={s.eventIcons}>
           {hasExternal && <Text style={s.eventIcon}>📅</Text>}
           {hasMandala && <Text style={s.eventIcon}>🎯</Text>}
+          {hasDream && <Text style={s.eventIcon}>🌟</Text>}
+          {hasGoal && <Text style={s.eventIcon}>🏆</Text>}
+          {hasMustDo && <Text style={s.eventIcon}>🔥</Text>}
+          {hasTodo && <Text style={s.eventIcon}>✅</Text>}
         </View>
       )}
       {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 16 * SCALE * weekScale }]}>{weather.icon}</Text>}

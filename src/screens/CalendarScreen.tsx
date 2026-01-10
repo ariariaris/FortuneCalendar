@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v2.5 (日別スケジュール表示追加)
+// Fortune Calendar カレンダー画面 v2.6 (夢・目標アイコン対応)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +15,11 @@ import { generateMonthlyFortune, generateMonthlyAdvice } from '../services/perio
 import { starsDisplay } from '../utils/fortuneUtils';
 import { getExternalEvents, getBirthdayEntries } from '../services/storageService';
 import { getTodosForCalendar } from '../services/mandalaService';
-import { getTodoItems, getMustDoItems } from '../services/goalService';
+import { getTodoItems, getMustDoItems, getDreams, getGoals } from '../services/goalService';
 import { ExternalCalendarEvent } from '../types/externalCalendar';
 import { BirthdayEntry } from '../types/birthday';
 import { MandalaTodo } from '../types/mandala';
-import { TodoItem, MustDoItem } from '../types/goalManagement';
+import { TodoItem, MustDoItem, Dream, Goal } from '../types/goalManagement';
 import { getDateIcons } from '../utils/calendarMerge';
 
 const SWIPE_THRESHOLD = 50;
@@ -44,6 +44,8 @@ export const CalendarScreen: React.FC = () => {
   const [mandalaTodos, setMandalaTodos] = useState<MandalaTodo[]>([]);
   const [goalTodos, setGoalTodos] = useState<TodoItem[]>([]);
   const [mustDoItems, setMustDoItems] = useState<MustDoItem[]>([]);
+  const [dreams, setDreams] = useState<Dream[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -86,18 +88,22 @@ export const CalendarScreen: React.FC = () => {
 
   // スケジュールデータ取得
   const loadScheduleData = useCallback(async () => {
-    const [events, bdays, mTodos, gTodos, mItems] = await Promise.all([
+    const [events, bdays, mTodos, gTodos, mItems, dList, gList] = await Promise.all([
       getExternalEvents(),
       getBirthdayEntries(),
       getTodosForCalendar(),
       getTodoItems(),
       getMustDoItems(),
+      getDreams(),
+      getGoals(),
     ]);
     setExternalEvents(events);
     setBirthdays(bdays);
     setMandalaTodos(mTodos);
     setGoalTodos(gTodos);
     setMustDoItems(mItems);
+    setDreams(dList);
+    setGoals(gList);
   }, []);
 
   useFocusEffect(useCallback(() => {
@@ -117,6 +123,16 @@ export const CalendarScreen: React.FC = () => {
   const scheduleItems = useMemo((): ScheduleItem[] => {
     const items: ScheduleItem[] = [];
     const [, m, d] = localSelectedDate.split('-').map(Number);
+
+    // 夢（期限がこの日のもの）
+    dreams
+      .filter(dr => dr.deadline?.startsWith(localSelectedDate))
+      .forEach(dr => items.push({ type: 'external', icon: '🌟', title: `夢: ${dr.title}`, time: '終日', color: '#FFD700', sortKey: 0 }));
+
+    // 目標（期限がこの日のもの）
+    goals
+      .filter(g => g.deadline?.startsWith(localSelectedDate) && g.status !== 'completed')
+      .forEach(g => items.push({ type: 'external', icon: '🏆', title: `目標: ${g.title}`, time: '終日', color: '#FF69B4', sortKey: 0 }));
 
     // 外部カレンダーイベント
     externalEvents
@@ -142,15 +158,15 @@ export const CalendarScreen: React.FC = () => {
       .filter(t => t.deadline && t.deadline.startsWith(localSelectedDate) && !t.isCompleted)
       .forEach(t => items.push({ type: 'mandala', icon: '🎯', title: t.title, time: '終日', color: '#8B5CF6', sortKey: 0 }));
 
+    // MustDo（期限がこの日のもの）
+    mustDoItems
+      .filter(mi => mi.deadline === localSelectedDate && mi.status !== 'completed')
+      .forEach(mi => items.push({ type: 'mustdo', icon: '🔥', title: mi.title, time: '終日', color: '#FF9800', sortKey: 0 }));
+
     // 目標管理Todo
     goalTodos
       .filter(t => t.date === localSelectedDate && !t.isCompleted)
       .forEach(t => items.push({ type: 'goal', icon: '✅', title: t.title, time: '終日', color: '#2196F3', sortKey: 0 }));
-
-    // MustDo（期限がこの日のもの）
-    mustDoItems
-      .filter(m => m.deadline === localSelectedDate && m.status !== 'completed')
-      .forEach(m => items.push({ type: 'mustdo', icon: '🔥', title: m.title, time: '終日', color: '#FF9800', sortKey: 0 }));
 
     // ソート: 時間あり(sortKey>0)を先に、時間順。終日(sortKey=0)は後ろ
     items.sort((a, b) => {
@@ -161,7 +177,7 @@ export const CalendarScreen: React.FC = () => {
     });
 
     return items;
-  }, [localSelectedDate, externalEvents, birthdays, mandalaTodos, goalTodos, mustDoItems]);
+  }, [localSelectedDate, externalEvents, birthdays, mandalaTodos, goalTodos, mustDoItems, dreams, goals]);
 
   // 有効な占いの平均スコア計算
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
@@ -236,12 +252,13 @@ export const CalendarScreen: React.FC = () => {
       const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
       const profile = userConfig.userProfile || undefined;
       const score = plugins.length > 0 ? Math.round(plugins.reduce((acc, p) => acc + p.generate(dateStr, profile).scores.total, 0) / plugins.length) : undefined;
-      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos);
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos);
       week.push(
         <CalendarDay key={i} day={dayNum} dayOfWeek={i} isToday={checkIsToday(d)}
           isSelected={localSelectedDate === dateStr} score={score} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
+          hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
           onPress={() => handleDayPress(dayNum, m, y)} isWeekView />
       );
     }
@@ -271,12 +288,13 @@ export const CalendarScreen: React.FC = () => {
       const dateStr = formatDate(date);
       const dayOfWeek = (firstDay + d - 1) % 7;
       const dayWeather = wc.enabled ? getWeatherForDate(weather, dateStr) : undefined;
-      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos);
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos);
       week.push(
         <CalendarDay key={d} day={d} dayOfWeek={dayOfWeek} isToday={checkIsToday(date)}
           isSelected={localSelectedDate === dateStr} score={monthScores[d]} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
+          hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
           onPress={() => handleDayPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }

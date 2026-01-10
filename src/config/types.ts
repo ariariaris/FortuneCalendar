@@ -86,6 +86,7 @@ export interface UserConfig {
   externalCalendar: ExternalCalendarConfig;
   birthday: BirthdayConfig;
   mandala: MandalaConfig;
+  showSplash: boolean;  // 起動スプラッシュ表示
 }
 
 /** ユーザープロフィール */

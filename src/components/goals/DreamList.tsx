@@ -1,8 +1,10 @@
-// Fortune Calendar 夢リスト v1.0
-import React, { useState } from 'react';
+// Fortune Calendar 夢リスト v1.2 (日付ピッカー対応)
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { DateInput } from '../DateInput';
 import { Dream } from '../../types/goalManagement';
 import { saveDream, updateDream, deleteDream } from '../../services/goalService';
+import { useAppStore } from '../../store/useAppStore';
 
 interface Props {
   dreams: Dream[];
@@ -10,15 +12,33 @@ interface Props {
 }
 
 export const DreamList: React.FC<Props> = ({ dreams, onRefresh }) => {
+  const { userConfig } = useAppStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear() + 10));
+  const [deadline, setDeadline] = useState('');
   const [category, setCategory] = useState('');
 
+  // 誕生日から月日を取得
+  const getBirthdayMonthDay = () => {
+    const bd = userConfig.userProfile?.birthDate;
+    if (!bd) return '01/01';
+    const [, m, d] = bd.split('-');
+    return `${m}/${d}`;
+  };
+
+  // 目標年が変わったらデフォルト期限を更新
+  useEffect(() => {
+    if (isAdding && !editId) {
+      const mmdd = getBirthdayMonthDay();
+      setDeadline(`${targetYear}/${mmdd}`);
+    }
+  }, [targetYear, isAdding, editId]);
+
   const resetForm = () => {
-    setTitle(''); setDescription(''); setTargetYear(String(new Date().getFullYear() + 10)); setCategory('');
+    setTitle(''); setDescription(''); setTargetYear(String(new Date().getFullYear() + 10)); setDeadline(''); setCategory('');
     setIsAdding(false); setEditId(null);
   };
 
@@ -27,16 +47,16 @@ export const DreamList: React.FC<Props> = ({ dreams, onRefresh }) => {
     const year = parseInt(targetYear, 10);
     if (isNaN(year) || year < new Date().getFullYear()) { Alert.alert('エラー', '有効な目標年を入力してください'); return; }
     if (editId) {
-      await updateDream(editId, { title: title.trim(), description: description.trim() || undefined, targetYear: year, category: category.trim() || undefined });
+      await updateDream(editId, { title: title.trim(), description: description.trim() || undefined, targetYear: year, deadline: deadline || undefined, category: category.trim() || undefined });
     } else {
-      await saveDream({ title: title.trim(), description: description.trim() || undefined, targetYear: year, category: category.trim() || undefined });
+      await saveDream({ title: title.trim(), description: description.trim() || undefined, targetYear: year, deadline: deadline || undefined, category: category.trim() || undefined });
     }
     resetForm(); onRefresh();
   };
 
   const handleEdit = (dream: Dream) => {
     setEditId(dream.id); setTitle(dream.title); setDescription(dream.description || '');
-    setTargetYear(String(dream.targetYear)); setCategory(dream.category || ''); setIsAdding(true);
+    setTargetYear(String(dream.targetYear)); setDeadline(dream.deadline || ''); setCategory(dream.category || ''); setIsAdding(true);
   };
 
   const handleDelete = (id: string) => {
@@ -64,7 +84,7 @@ export const DreamList: React.FC<Props> = ({ dreams, onRefresh }) => {
             {dream.category && <Text style={styles.category}>{dream.category}</Text>}
           </View>
           {dream.description && <Text style={styles.description}>{dream.description}</Text>}
-          <Text style={styles.deadline}>期限: {yearsFromNow(dream.targetYear)} ({dream.targetYear}年)</Text>
+          <Text style={styles.deadline}>期限: {dream.deadline || `${dream.targetYear}年`} ({yearsFromNow(dream.targetYear)})</Text>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => handleEdit(dream)} style={styles.btn}><Text style={styles.btnText}>編集</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => handleDelete(dream.id)} style={[styles.btn, styles.deleteBtn]}><Text style={styles.deleteBtnText}>削除</Text></TouchableOpacity>
@@ -76,6 +96,7 @@ export const DreamList: React.FC<Props> = ({ dreams, onRefresh }) => {
           <TextInput style={styles.input} placeholder="夢のタイトル" value={title} onChangeText={setTitle} />
           <TextInput style={[styles.input, styles.textArea]} placeholder="詳細（任意）" value={description} onChangeText={setDescription} multiline />
           <TextInput style={styles.input} placeholder="目標年（例: 2036）" value={targetYear} onChangeText={setTargetYear} keyboardType="numeric" />
+          <DateInput value={deadline} onChange={setDeadline} style={styles.input} />
           <TextInput style={styles.input} placeholder="カテゴリ（任意: 仕事/プライベート等）" value={category} onChangeText={setCategory} />
           <View style={styles.formActions}>
             <TouchableOpacity onPress={resetForm} style={styles.cancelBtn}><Text style={styles.cancelBtnText}>キャンセル</Text></TouchableOpacity>

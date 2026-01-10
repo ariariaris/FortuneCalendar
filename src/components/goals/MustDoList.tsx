@@ -1,6 +1,7 @@
-// Fortune Calendar やるべきリスト v1.0
-import React, { useState } from 'react';
+// Fortune Calendar やるべきリスト v1.2 (日付ピッカー対応)
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { DateInput } from '../DateInput';
 import { MustDoItem, MustDoTimeframe, MustDoPriority, Goal } from '../../types/goalManagement';
 import { saveMustDoItem, updateMustDoItem, deleteMustDoItem } from '../../services/goalService';
 
@@ -14,6 +15,21 @@ const PRIORITY_COLORS: Record<MustDoPriority, string> = { high: '#f44336', mediu
 const PRIORITY_LABELS: Record<MustDoPriority, string> = { high: '高', medium: '中', low: '低' };
 const TIMEFRAME_LABELS: Record<MustDoTimeframe, string> = { week: '今週', month: '今月' };
 
+// デフォルト期限計算（YYYY/MM/DD形式）
+const getDefaultDeadline = (tf: MustDoTimeframe): string => {
+  const now = new Date();
+  if (tf === 'week') {
+    // 今週の日曜日
+    const sunday = new Date(now);
+    sunday.setDate(now.getDate() + (7 - now.getDay()));
+    return `${sunday.getFullYear()}/${String(sunday.getMonth() + 1).padStart(2, '0')}/${String(sunday.getDate()).padStart(2, '0')}`;
+  } else {
+    // 月末
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return `${lastDay.getFullYear()}/${String(lastDay.getMonth() + 1).padStart(2, '0')}/${String(lastDay.getDate()).padStart(2, '0')}`;
+  }
+};
+
 export const MustDoList: React.FC<Props> = ({ mustDoItems, goals, onRefresh }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<MustDoTimeframe>('week');
   const [isAdding, setIsAdding] = useState(false);
@@ -21,6 +37,11 @@ export const MustDoList: React.FC<Props> = ({ mustDoItems, goals, onRefresh }) =
   const [deadline, setDeadline] = useState('');
   const [priority, setPriority] = useState<MustDoPriority>('medium');
   const [goalId, setGoalId] = useState<string | undefined>();
+
+  // 追加モード開始時にデフォルト期限設定
+  useEffect(() => {
+    if (isAdding) setDeadline(getDefaultDeadline(selectedTimeframe));
+  }, [isAdding, selectedTimeframe]);
 
   const filteredItems = mustDoItems.filter(i => i.timeframe === selectedTimeframe);
   const sortedItems = [...filteredItems].sort((a, b) => {
@@ -77,7 +98,7 @@ export const MustDoList: React.FC<Props> = ({ mustDoItems, goals, onRefresh }) =
         {isAdding ? (
           <View style={styles.form}>
             <TextInput style={styles.input} placeholder="タスク名" value={title} onChangeText={setTitle} />
-            <TextInput style={styles.input} placeholder="期限 (例: 1/10)" value={deadline} onChangeText={setDeadline} />
+            <DateInput value={deadline} onChange={setDeadline} style={styles.input} />
             <Text style={styles.label}>優先度:</Text>
             <View style={styles.priorityRow}>
               {(['high', 'medium', 'low'] as MustDoPriority[]).map(p => (

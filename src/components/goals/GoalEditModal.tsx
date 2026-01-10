@@ -1,8 +1,10 @@
-// Fortune Calendar 目標編集モーダル v1.0
+// Fortune Calendar 目標編集モーダル v1.2 (日付ピッカー対応)
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert } from 'react-native';
+import { DateInput } from '../DateInput';
 import { Goal, GoalTimeframe, Dream, Purpose } from '../../types/goalManagement';
 import { GoalProgress } from './GoalProgress';
+import { useAppStore } from '../../store/useAppStore';
 
 interface Props {
   visible: boolean;
@@ -17,6 +19,7 @@ interface Props {
 const TIMEFRAME_LABELS: Record<GoalTimeframe, string> = { year: '今年', '3year': '3年後', '5year': '5年後', '10year': '10年後' };
 
 export const GoalEditModal: React.FC<Props> = ({ visible, goal, dreams, purposes, timeframe, onSave, onClose }) => {
+  const { userConfig } = useAppStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -24,14 +27,23 @@ export const GoalEditModal: React.FC<Props> = ({ visible, goal, dreams, purposes
   const [dreamId, setDreamId] = useState<string | undefined>();
   const [purposeId, setPurposeId] = useState<string | undefined>();
 
+  // 誕生日ベースのデフォルト期限を計算
+  const getDefaultDeadline = () => {
+    const bd = userConfig.userProfile?.birthDate;
+    const mmdd = bd ? bd.split('-').slice(1).join('/') : '01/01';
+    const currentYear = new Date().getFullYear();
+    const targetYear = currentYear + (timeframe === 'year' ? 0 : parseInt(timeframe));
+    return `${targetYear}/${mmdd}`;
+  };
+
   useEffect(() => {
     if (goal) {
       setTitle(goal.title); setDescription(goal.description || ''); setDeadline(goal.deadline || '');
       setProgress(goal.progress); setDreamId(goal.dreamId); setPurposeId(goal.purposeId);
     } else {
-      setTitle(''); setDescription(''); setDeadline(''); setProgress(0); setDreamId(undefined); setPurposeId(undefined);
+      setTitle(''); setDescription(''); setDeadline(getDefaultDeadline()); setProgress(0); setDreamId(undefined); setPurposeId(undefined);
     }
-  }, [goal, visible]);
+  }, [goal, visible, timeframe]);
 
   const handleSave = () => {
     if (!title.trim()) { Alert.alert('エラー', '目標タイトルを入力してください'); return; }
@@ -51,7 +63,7 @@ export const GoalEditModal: React.FC<Props> = ({ visible, goal, dreams, purposes
           <ScrollView style={styles.form}>
             <TextInput style={styles.input} placeholder="目標タイトル" value={title} onChangeText={setTitle} />
             <TextInput style={[styles.input, styles.textArea]} placeholder="詳細（任意）" value={description} onChangeText={setDescription} multiline />
-            <TextInput style={styles.input} placeholder="期限 (YYYY/MM/DD)" value={deadline} onChangeText={setDeadline} />
+            <DateInput value={deadline} onChange={setDeadline} style={styles.input} />
             <Text style={styles.label}>進捗: {progress}%</Text>
             <View style={styles.progressRow}>
               <GoalProgress progress={progress} showLabel={false} />

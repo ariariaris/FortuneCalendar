@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0c (Web版expo-sqlite問題修正)
+// Fortune Calendar v3.0f (日付ピッカー対応)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -33,12 +33,19 @@ export default function App() {
   const init = useAppStore((s) => s.init);
   const userConfig = useAppStore((s) => s.userConfig);
   const [showSplash, setShowSplash] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    init();
+    init().then(() => setInitialized(true));
   }, []);
 
-  if (showSplash) {
+  // 設定読み込み待ち
+  if (!initialized) {
+    return null;
+  }
+
+  // スプラッシュ表示（設定がONの場合のみ）
+  if (showSplash && userConfig.showSplash !== false) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 

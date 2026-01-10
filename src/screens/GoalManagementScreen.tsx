@@ -1,19 +1,17 @@
-// Fortune Calendar 目標管理画面 v1.0
+// Fortune Calendar 目標管理画面 v1.1 (目的タブ削除・4タブ化)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { Dream, Purpose, Goal, MustDoItem, TodoItem } from '../types/goalManagement';
 import { getDreams, getPurposes, getGoals, getMustDoItems, getTodoItems, initGoalService } from '../services/goalService';
 import { DreamList } from '../components/goals/DreamList';
-import { PurposeList } from '../components/goals/PurposeList';
 import { GoalList } from '../components/goals/GoalList';
 import { MustDoList } from '../components/goals/MustDoList';
 import { TodoList } from '../components/goals/TodoList';
 
-type TabType = 'dream' | 'purpose' | 'goal' | 'mustdo' | 'todo';
+type TabType = 'dream' | 'goal' | 'mustdo' | 'todo';
 
 const TABS: { key: TabType; label: string; color: string }[] = [
   { key: 'dream', label: '夢', color: '#FFD700' },
-  { key: 'purpose', label: '目的', color: '#9370DB' },
   { key: 'goal', label: '目標', color: '#FF69B4' },
   { key: 'mustdo', label: 'やる', color: '#FF9800' },
   { key: 'todo', label: 'Todo', color: '#2196F3' },
@@ -46,7 +44,6 @@ export const GoalManagementScreen: React.FC = () => {
     if (isLoading) return <View style={styles.loading}><Text>読み込み中...</Text></View>;
     switch (activeTab) {
       case 'dream': return <DreamList dreams={dreams} onRefresh={loadData} />;
-      case 'purpose': return <PurposeList purposes={purposes} dreams={dreams} onRefresh={loadData} />;
       case 'goal': return <GoalList goals={goals} dreams={dreams} purposes={purposes} onRefresh={loadData} />;
       case 'mustdo': return <MustDoList mustDoItems={mustDoItems} goals={goals} onRefresh={loadData} />;
       case 'todo': return <TodoList todoItems={todoItems} onRefresh={loadData} />;

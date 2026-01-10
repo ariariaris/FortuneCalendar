@@ -18,6 +18,7 @@ export interface Dream {
   title: string;
   description?: string;
   targetYear: number;
+  deadline?: string;       // デフォルト: [targetYear]/[誕生月日]
   category?: string;
   imageUrl?: string;
   createdAt: string;

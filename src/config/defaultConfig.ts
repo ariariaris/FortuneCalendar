@@ -67,6 +67,7 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
     showOnCalendar: true,
     defaultTimeframe: 'year',
   },
+  showSplash: true,  // 起動スプラッシュ表示
 };
 
 /** テーマカラー20色 */

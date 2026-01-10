@@ -1,7 +1,8 @@
-// Fortune Calendar カレンダー統合表示 v1.0
+// Fortune Calendar カレンダー統合表示 v1.1 (夢・目標対応)
 import { ExternalCalendarEvent } from '../types/externalCalendar';
 import { BirthdayEntry } from '../types/birthday';
 import { MandalaTodo } from '../types/mandala';
+import { Dream, Goal, MustDoItem, TodoItem } from '../types/goalManagement';
 
 /** カレンダー表示用アイテム */
 export interface CalendarDisplayItem {
@@ -93,24 +94,44 @@ export const mergeCalendarItems = (
   return items;
 };
 
-/** 日付にアイコンがあるかチェック */
+/** 日付アイコン結果 */
+export interface DateIcons {
+  hasExternal: boolean;
+  hasBirthday: boolean;
+  hasMandala: boolean;
+  hasDream: boolean;
+  hasGoal: boolean;
+  hasMustDo: boolean;
+  hasTodo: boolean;
+  birthdayNames: string[];
+}
+
+/** 日付にアイコンがあるかチェック（目標管理対応） */
 export const getDateIcons = (
   date: string,
   externalEvents: ExternalCalendarEvent[],
   birthdays: BirthdayEntry[],
-  mandalaTodos: MandalaTodo[]
-): { hasExternal: boolean; hasBirthday: boolean; hasMandala: boolean; birthdayNames: string[] } => {
+  mandalaTodos: MandalaTodo[],
+  dreams?: Dream[],
+  goals?: Goal[],
+  mustDoItems?: MustDoItem[],
+  todoItems?: TodoItem[]
+): DateIcons => {
   const [, m, d] = date.split('-').map(Number);
 
   const hasExternal = externalEvents.some((e) => e.startTime.split('T')[0] === date);
   const birthdayEntries = birthdays.filter((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true));
   const hasBirthday = birthdayEntries.length > 0;
   const birthdayNames = birthdayEntries.map((b) => b.displayName);
-  const hasMandala = mandalaTodos.some(
-    (t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted
-  );
+  const hasMandala = mandalaTodos.some((t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted);
 
-  return { hasExternal, hasBirthday, hasMandala, birthdayNames };
+  // 目標管理アイテム
+  const hasDream = dreams?.some((d) => d.deadline?.startsWith(date)) ?? false;
+  const hasGoal = goals?.some((g) => g.deadline?.startsWith(date) && g.status !== 'completed') ?? false;
+  const hasMustDo = mustDoItems?.some((m) => m.deadline === date && m.status !== 'completed') ?? false;
+  const hasTodo = todoItems?.some((t) => t.date === date && !t.isCompleted) ?? false;
+
+  return { hasExternal, hasBirthday, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo, birthdayNames };
 };
 
 const formatTime = (isoStr: string): string => {

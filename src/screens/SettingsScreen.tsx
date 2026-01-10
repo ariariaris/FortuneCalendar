@@ -174,6 +174,10 @@ export const SettingsScreen: React.FC = () => {
             <Switch value={userConfig.starColorMode === 'colorful'} onValueChange={(v) => setUserConfig({ starColorMode: v ? 'colorful' : 'simple' })} />
           </View>
           <View style={s.row}>
+            <Text style={s.label}>起動スプラッシュ表示</Text>
+            <Switch value={userConfig.showSplash ?? true} onValueChange={(v) => setUserConfig({ showSplash: v })} />
+          </View>
+          <View style={s.row}>
             <Text style={s.label}>起動時のタブ</Text>
             <View style={s.btnGroup}>
               {TAB_OPTIONS.map(({ key, label }) => (

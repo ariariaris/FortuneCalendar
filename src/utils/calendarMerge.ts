@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー統合表示 v1.1 (夢・目標対応)
+// Fortune Calendar カレンダー統合表示 v1.2 (ユーザー誕生日対応)
 import { ExternalCalendarEvent } from '../types/externalCalendar';
 import { BirthdayEntry } from '../types/birthday';
 import { MandalaTodo } from '../types/mandala';
@@ -106,7 +106,7 @@ export interface DateIcons {
   birthdayNames: string[];
 }
 
-/** 日付にアイコンがあるかチェック（目標管理対応） */
+/** 日付にアイコンがあるかチェック（目標管理対応・ユーザー誕生日対応） */
 export const getDateIcons = (
   date: string,
   externalEvents: ExternalCalendarEvent[],
@@ -115,20 +115,36 @@ export const getDateIcons = (
   dreams?: Dream[],
   goals?: Goal[],
   mustDoItems?: MustDoItem[],
-  todoItems?: TodoItem[]
+  todoItems?: TodoItem[],
+  userBirthDate?: string,
+  userName?: string
 ): DateIcons => {
   const [, m, d] = date.split('-').map(Number);
+  const addedNames = new Set<string>();
+  const birthdayNames: string[] = [];
+
+  // ユーザー自身の誕生日チェック
+  if (userBirthDate) {
+    const [, um, ud] = userBirthDate.split('-').map(Number);
+    if (um === m && ud === d) {
+      const name = userName || 'あなた';
+      birthdayNames.push(name);
+      addedNames.add(name);
+    }
+  }
+
+  // 登録済み誕生日（重複スキップ）
+  const birthdayEntries = birthdays.filter((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true) && !addedNames.has(b.displayName));
+  birthdayEntries.forEach((b) => { birthdayNames.push(b.displayName); addedNames.add(b.displayName); });
 
   const hasExternal = externalEvents.some((e) => e.startTime.split('T')[0] === date);
-  const birthdayEntries = birthdays.filter((b) => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true));
-  const hasBirthday = birthdayEntries.length > 0;
-  const birthdayNames = birthdayEntries.map((b) => b.displayName);
+  const hasBirthday = birthdayNames.length > 0;
   const hasMandala = mandalaTodos.some((t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted);
 
   // 目標管理アイテム
-  const hasDream = dreams?.some((d) => d.deadline?.startsWith(date)) ?? false;
+  const hasDream = dreams?.some((dr) => dr.deadline?.startsWith(date)) ?? false;
   const hasGoal = goals?.some((g) => g.deadline?.startsWith(date) && g.status !== 'completed') ?? false;
-  const hasMustDo = mustDoItems?.some((m) => m.deadline === date && m.status !== 'completed') ?? false;
+  const hasMustDo = mustDoItems?.some((mi) => mi.deadline === date && mi.status !== 'completed') ?? false;
   const hasTodo = todoItems?.some((t) => t.date === date && !t.isCompleted) ?? false;
 
   return { hasExternal, hasBirthday, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo, birthdayNames };

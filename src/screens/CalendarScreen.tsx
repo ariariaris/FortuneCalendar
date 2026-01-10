@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v2.8 (文字サイズ対応)
+// Fortune Calendar カレンダー画面 v2.9 (ユーザー誕生日自動表示)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -154,10 +154,22 @@ export const CalendarScreen: React.FC = () => {
         items.push({ type: 'external', icon: '📅', title: e.title, time, color: e.calendarColor || '#4285F4', sortKey });
       });
 
-    // 誕生日
+    // 誕生日（重複排除：同姓同名は1つだけ表示）
+    const addedNames = new Set<string>();
+    // ユーザー自身の誕生日（設定プロフィールから）
+    const userBirthDate = userConfig.userProfile?.birthDate;
+    const userName = userConfig.userProfile?.name || 'あなた';
+    if (userBirthDate) {
+      const [, um, ud] = userBirthDate.split('-').map(Number);
+      if (um === m && ud === d) {
+        items.push({ type: 'birthday', icon: '🎂', title: `${userName}さんの誕生日`, time: '終日', color: '#FF69B4', sortKey: 0 });
+        addedNames.add(userName);
+      }
+    }
+    // 登録済み誕生日（重複スキップ）
     birthdays
-      .filter(b => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true))
-      .forEach(b => items.push({ type: 'birthday', icon: '🎂', title: `${b.displayName}さんの誕生日`, time: '終日', color: '#FF69B4', sortKey: 0 }));
+      .filter(b => b.birthday.month === m && b.birthday.day === d && (b.showOnCalendar ?? true) && !addedNames.has(b.displayName))
+      .forEach(b => { items.push({ type: 'birthday', icon: '🎂', title: `${b.displayName}さんの誕生日`, time: '終日', color: '#FF69B4', sortKey: 0 }); addedNames.add(b.displayName); });
 
     // マンダラTodo
     mandalaTodos
@@ -258,7 +270,7 @@ export const CalendarScreen: React.FC = () => {
       const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
       const profile = userConfig.userProfile || undefined;
       const score = plugins.length > 0 ? Math.round(plugins.reduce((acc, p) => acc + p.generate(dateStr, profile).scores.total, 0) / plugins.length) : undefined;
-      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos);
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos, userConfig.userProfile?.birthDate, userConfig.userProfile?.name);
       week.push(
         <CalendarDay key={i} day={dayNum} dayOfWeek={i} isToday={checkIsToday(d)}
           isSelected={localSelectedDate === dateStr} score={score} colorful={colorful}
@@ -294,7 +306,7 @@ export const CalendarScreen: React.FC = () => {
       const dateStr = formatDate(date);
       const dayOfWeek = (firstDay + d - 1) % 7;
       const dayWeather = wc.enabled ? getWeatherForDate(weather, dateStr) : undefined;
-      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos);
+      const icons = getDateIcons(dateStr, externalEvents, birthdays, mandalaTodos, dreams, goals, mustDoItems, goalTodos, userConfig.userProfile?.birthDate, userConfig.userProfile?.name);
       week.push(
         <CalendarDay key={d} day={d} dayOfWeek={dayOfWeek} isToday={checkIsToday(date)}
           isSelected={localSelectedDate === dateStr} score={monthScores[d]} colorful={colorful}

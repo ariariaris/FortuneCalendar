@@ -1,6 +1,7 @@
-// Fortune Calendar 設定画面 v2.0 (MMP拡張対応)
+// Fortune Calendar 設定画面 v2.2 (3ボタン地域選択)
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
+import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
 import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
@@ -27,6 +28,11 @@ export const SettingsScreen: React.FC = () => {
   const [showCalendarSettings, setShowCalendarSettings] = useState(false);
   const [showBirthdaySettings, setShowBirthdaySettings] = useState(false);
   const [showMandalaSettings, setShowMandalaSettings] = useState(false);
+  const [showPrefPicker, setShowPrefPicker] = useState(false);
+  const [showSubAreaPicker, setShowSubAreaPicker] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const currentPref = getPrefectureByCode(userConfig.weatherConfig?.areaCode || '130000');
+  const currentArea = currentPref?.areas.find(a => a.code === userConfig.weatherConfig?.areaCode);
 
   // 隠し占いメニュー（名前に9999で表示、0000で非表示）
   const [showHiddenFortunes, setShowHiddenFortunes] = useState(false);
@@ -85,6 +91,21 @@ export const SettingsScreen: React.FC = () => {
   const handleYearScrollLayout = () => {
     if (showPicker === 'year') {
       yearScrollRef.current?.scrollTo({ y: targetYearIndex * 49, animated: false });
+    }
+  };
+
+  // 現在地取得
+  const handleGetLocation = async () => {
+    setIsLocating(true);
+    try {
+      const { lat, lon } = await getCurrentPosition();
+      const code = await getAreaCodeFromCoords(lat, lon);
+      setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, areaCode: code } });
+      Alert.alert('位置情報', `${getAreaName(code)}に設定しました`);
+    } catch (e) {
+      Alert.alert('エラー', '位置情報を取得できませんでした');
+    } finally {
+      setIsLocating(false);
     }
   };
 
@@ -196,6 +217,22 @@ export const SettingsScreen: React.FC = () => {
             <Switch value={userConfig.weatherConfig?.enabled ?? true} onValueChange={(v) => setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, enabled: v } })} />
           </View>
           <View style={s.row}>
+            <Text style={s.label}>地域</Text>
+            <View style={s.areaRow}>
+              <TouchableOpacity style={s.areaBtn} onPress={() => setShowPrefPicker(true)}>
+                <Text style={s.areaBtnText}>{currentPref?.name || '東京都'}</Text>
+                <Text style={s.areaArrow}>▼</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.areaBtn} onPress={() => setShowSubAreaPicker(true)}>
+                <Text style={s.areaBtnText}>{currentArea?.name || '東京地方'}</Text>
+                <Text style={s.areaArrow}>▼</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.locationBtn, isLocating && s.locationBtnDisabled]} onPress={handleGetLocation} disabled={isLocating}>
+                <Text style={s.locationBtnText}>{isLocating ? '...' : '📍'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={s.row}>
             <Text style={s.label}>天気アイコン</Text>
             <Switch value={userConfig.weatherConfig?.showIcon ?? true} onValueChange={(v) => setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, showIcon: v } })} />
           </View>
@@ -305,6 +342,38 @@ export const SettingsScreen: React.FC = () => {
       <Modal visible={showMandalaSettings} animationType="slide">
         <MandalaScreen onClose={() => setShowMandalaSettings(false)} />
       </Modal>
+      <Modal visible={showPrefPicker} transparent animationType="fade">
+        <View style={s.modal}>
+          <View style={s.pickerBox}>
+            <Text style={s.pickerTitle}>都道府県を選択</Text>
+            <ScrollView style={s.pickerScroll}>
+              {PREFECTURES.map((pref) => (
+                <TouchableOpacity key={pref.code} style={[s.pickerItem, currentPref?.code === pref.code && s.pickerItemActive]}
+                  onPress={() => { setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, areaCode: pref.areas[0].code } }); setShowPrefPicker(false); }}>
+                  <Text style={[s.pickerItemText, currentPref?.code === pref.code && s.pickerItemTextActive]}>{pref.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={s.btn} onPress={() => setShowPrefPicker(false)}><Text>閉じる</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showSubAreaPicker} transparent animationType="fade">
+        <View style={s.modal}>
+          <View style={s.pickerBox}>
+            <Text style={s.pickerTitle}>{currentPref?.name || '東京都'} - エリア選択</Text>
+            <ScrollView style={s.pickerScroll}>
+              {(currentPref?.areas || []).map((area) => (
+                <TouchableOpacity key={area.code} style={[s.pickerItem, userConfig.weatherConfig?.areaCode === area.code && s.pickerItemActive]}
+                  onPress={() => { setUserConfig({ weatherConfig: { ...userConfig.weatherConfig, areaCode: area.code } }); setShowSubAreaPicker(false); }}>
+                  <Text style={[s.pickerItemText, userConfig.weatherConfig?.areaCode === area.code && s.pickerItemTextActive]}>{area.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={s.btn} onPress={() => setShowSubAreaPicker(false)}><Text>閉じる</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={showColorPicker} transparent animationType="fade">
         <View style={s.modal}>
           <View style={s.colorPickerBox}>
@@ -391,6 +460,16 @@ const s = StyleSheet.create({
   devLabel: { fontSize: 12, color: '#999', backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   linkArrow: { fontSize: 20, color: '#ccc' },
+  areaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  areaBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  areaBtnText: { fontSize: 14, color: '#333' },
+  areaArrow: { fontSize: 10, color: '#999', marginLeft: 4 },
+  locationBtn: { backgroundColor: '#4A90D9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  locationBtnDisabled: { opacity: 0.5 },
+  locationBtnText: { fontSize: 12, color: '#fff' },
+  pickerItemActive: { backgroundColor: '#FF69B4' },
+  pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
+  pickerBtnRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, gap: 8 },
 });
 
 export default SettingsScreen;

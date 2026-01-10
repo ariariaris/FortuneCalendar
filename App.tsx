@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0f (日付ピッカー対応)
+// Fortune Calendar v3.0i (3ボタン地域選択)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';

@@ -1,6 +1,6 @@
-// Fortune Calendar カレンダー画面 v3.2 (日付長押しで予定作成)
+// Fortune Calendar カレンダー画面 v3.3 (プルダウン更新)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
@@ -41,6 +41,7 @@ export const CalendarScreen: React.FC = () => {
   const [weather, setWeather] = useState<DayWeather[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showEventCreate, setShowEventCreate] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const viewMode = userConfig.calendarViewMode || 'month';
 
   // スケジュール表示用データ
@@ -127,6 +128,13 @@ export const CalendarScreen: React.FC = () => {
   useFocusEffect(useCallback(() => {
     loadScheduleData();
   }, [loadScheduleData]));
+
+  // プルダウン更新
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadScheduleData();
+    setRefreshing(false);
+  }, [loadScheduleData]);
 
   // 選択日のスケジュールアイテム計算
   interface ScheduleItem {
@@ -387,7 +395,8 @@ export const CalendarScreen: React.FC = () => {
           <Text style={[s.monthlyAdvice, { fontSize: getFontSize(12, fs) }]}>{monthlyAdvice}</Text>
         </View>
       )}
-      <ScrollView style={s.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scrollContainer} showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColor} colors={[themeColor]} />}>
         {/* キャラ＆風物詩 */}
         <View style={s.seasonBox}>
           <MyCharacter size={80} />

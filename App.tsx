@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0y (タブアイコン変更)
+// Fortune Calendar v3.1.0 (目標→夢)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -96,7 +96,7 @@ export default function App() {
           name="Goals"
           component={GoalManagementScreen}
           options={{
-            title: '目標',
+            title: '夢',
             headerShown: false,
             tabBarIcon: ({ focused }) => <TabIcon name="🎯" focused={focused} />,
           }}

@@ -55,6 +55,12 @@
           "calendarPermission": "カレンダーの予定を表示するために使用します。"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8e7737a4-3bd8-42c3-82af-f381a37f23b2"
+      }
+    },
+    "owner": "s.arihara1967"
   }
 }

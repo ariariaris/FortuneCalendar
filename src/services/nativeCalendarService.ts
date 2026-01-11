@@ -1,4 +1,4 @@
-// Fortune Calendar ネイティブカレンダーサービス v2.0
+// Fortune Calendar ネイティブカレンダーサービス v3.0 (編集・削除対応)
 // Android/iOSシステムカレンダーの読み書き
 import { Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
@@ -246,6 +246,75 @@ export const createNativeCalendarEvent = async (
     return eventId;
   } catch (error) {
     console.error('イベント作成エラー:', error);
+    return null;
+  }
+};
+
+// =====================
+// イベント編集・削除
+// =====================
+
+/** イベント更新 */
+export const updateNativeCalendarEvent = async (
+  eventId: string,
+  data: Partial<EventCreateData>
+): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') return false;
+
+    const eventDetails: Partial<Calendar.Event> = {};
+    if (data.title !== undefined) eventDetails.title = data.title;
+    if (data.startDate !== undefined) eventDetails.startDate = data.startDate;
+    if (data.endDate !== undefined) eventDetails.endDate = data.endDate;
+    if (data.isAllDay !== undefined) eventDetails.allDay = data.isAllDay;
+    if (data.location !== undefined) eventDetails.location = data.location;
+    if (data.notes !== undefined) eventDetails.notes = data.notes;
+    if (data.recurrence && data.recurrence !== 'none') {
+      eventDetails.recurrenceRule = buildRecurrenceRule(data.recurrence);
+    }
+    if (data.reminders && data.reminders.length > 0) {
+      eventDetails.alarms = data.reminders.map(minutes => ({ relativeOffset: minutes }));
+    }
+
+    await Calendar.updateEventAsync(eventId, eventDetails);
+    return true;
+  } catch (error) {
+    console.error('イベント更新エラー:', error);
+    return false;
+  }
+};
+
+/** イベント削除 */
+export const deleteNativeCalendarEvent = async (eventId: string): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') return false;
+
+    await Calendar.deleteEventAsync(eventId);
+    return true;
+  } catch (error) {
+    console.error('イベント削除エラー:', error);
+    return false;
+  }
+};
+
+/** 単一イベント取得 */
+export const getNativeCalendarEvent = async (eventId: string): Promise<Calendar.Event | null> => {
+  if (Platform.OS === 'web') return null;
+
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') return null;
+
+    const event = await Calendar.getEventAsync(eventId);
+    return event;
+  } catch (error) {
+    console.error('イベント取得エラー:', error);
     return null;
   }
 };

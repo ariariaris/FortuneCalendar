@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.3 (プルダウン更新)
+// Fortune Calendar カレンダー画面 v3.4 (予定編集・削除対応)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { getDateIcons } from '../utils/calendarMerge';
 import { getAreaByCode } from '../config/areaCode';
 import { fetchNativeCalendarEvents } from '../services/nativeCalendarService';
 import { EventCreateScreen } from './EventCreateScreen';
+import { EventDetailScreen } from './EventDetailScreen';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -41,6 +42,8 @@ export const CalendarScreen: React.FC = () => {
   const [weather, setWeather] = useState<DayWeather[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showEventCreate, setShowEventCreate] = useState(false);
+  const [showEventDetail, setShowEventDetail] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ExternalCalendarEvent | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const viewMode = userConfig.calendarViewMode || 'month';
 
@@ -144,6 +147,7 @@ export const CalendarScreen: React.FC = () => {
     time: string;
     color: string;
     sortKey: number;
+    event?: ExternalCalendarEvent;  // 外部イベントの場合に元データを保持
   }
 
   const scheduleItems = useMemo((): ScheduleItem[] => {
@@ -171,7 +175,7 @@ export const CalendarScreen: React.FC = () => {
           time = `${dt.getHours()}:${String(dt.getMinutes()).padStart(2, '0')}`;
           sortKey = dt.getHours() * 60 + dt.getMinutes();
         }
-        items.push({ type: 'external', icon: '📅', title: e.title, time, color: e.calendarColor || '#4285F4', sortKey });
+        items.push({ type: 'external', icon: '📅', title: e.title, time, color: e.calendarColor || '#4285F4', sortKey, event: e });
       });
 
     // 誕生日（重複排除：同姓同名は1つだけ表示）
@@ -428,11 +432,22 @@ export const CalendarScreen: React.FC = () => {
             </TouchableOpacity>
           ) : (
             scheduleItems.map((item, idx) => (
-              <View key={idx} style={s.scheduleItem}>
+              <TouchableOpacity
+                key={idx}
+                style={s.scheduleItem}
+                activeOpacity={item.event ? 0.6 : 1}
+                onPress={() => {
+                  if (item.event && Platform.OS !== 'web') {
+                    setSelectedEvent(item.event);
+                    setShowEventDetail(true);
+                  }
+                }}
+              >
                 <Text style={[s.scheduleTime, { color: item.color, fontSize: getFontSize(12, fs) }]}>{item.time}</Text>
                 <Text style={[s.scheduleIcon, { fontSize: getFontSize(16, fs) }]}>{item.icon}</Text>
                 <Text style={[s.scheduleTitle, { fontSize: getFontSize(14, fs) }]} numberOfLines={1}>{item.title}</Text>
-              </View>
+                {item.event && Platform.OS !== 'web' && <Text style={s.scheduleArrow}>›</Text>}
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -467,6 +482,13 @@ export const CalendarScreen: React.FC = () => {
       onClose={() => setShowEventCreate(false)}
       onSave={loadScheduleData}
       initialDate={localSelectedDate}
+    />
+    {/* 予定詳細画面 */}
+    <EventDetailScreen
+      visible={showEventDetail}
+      event={selectedEvent}
+      onClose={() => { setShowEventDetail(false); setSelectedEvent(null); }}
+      onUpdate={loadScheduleData}
     />
     </View>
   );
@@ -525,6 +547,7 @@ const s = StyleSheet.create({
   scheduleTime: { fontSize: 12, fontWeight: '600', width: 50 },
   scheduleIcon: { fontSize: 16, marginHorizontal: 8 },
   scheduleTitle: { flex: 1, fontSize: 14, color: '#333' },
+  scheduleArrow: { fontSize: 18, color: '#999', marginLeft: 8 },
 });
 
 export default CalendarScreen;

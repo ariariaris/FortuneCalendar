@@ -1,4 +1,4 @@
-// Fortune Calendar ネイティブカレンダーサービス v3.0 (編集・削除対応)
+// Fortune Calendar ネイティブカレンダーサービス v3.1 (タイムゾーン修正)
 // Android/iOSシステムカレンダーの読み書き
 import { Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
@@ -34,6 +34,25 @@ export interface EventCreateData {
 }
 
 const NATIVE_ACCOUNT_ID = 'native_device_calendar';
+
+/** ローカルタイムゾーンで日付をフォーマット (YYYY-MM-DD) */
+const formatLocalDate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+/** ローカルタイムゾーンで日時をフォーマット (ISO形式) */
+const formatLocalDateTime = (date: Date): string => {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+};
 
 /** カレンダーパーミッション要求 */
 export const requestCalendarPermission = async (): Promise<PermissionStatus> => {
@@ -138,21 +157,12 @@ const convertToExternalEvent = (
   event: Calendar.Event,
   calendar?: Calendar.Calendar
 ): ExternalCalendarEvent => {
-  // 開始時刻
-  let startTime: string;
-  if (event.allDay) {
-    startTime = new Date(event.startDate).toISOString().split('T')[0];
-  } else {
-    startTime = new Date(event.startDate).toISOString();
-  }
+  const startDt = new Date(event.startDate);
+  const endDt = new Date(event.endDate);
 
-  // 終了時刻
-  let endTime: string;
-  if (event.allDay) {
-    endTime = new Date(event.endDate).toISOString().split('T')[0];
-  } else {
-    endTime = new Date(event.endDate).toISOString();
-  }
+  // ローカルタイムゾーンでフォーマット（UTC変換によるずれを防止）
+  const startTime = event.allDay ? formatLocalDate(startDt) : formatLocalDateTime(startDt);
+  const endTime = event.allDay ? formatLocalDate(endDt) : formatLocalDateTime(endDt);
 
   return {
     id: `native_${event.id}`,

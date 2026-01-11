@@ -1,11 +1,11 @@
-// Fortune Calendar カレンダー日付 v3.0 (予定テキスト表示)
+// Fortune Calendar カレンダー日付 v3.1 (動的予定表示数)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 const SCALE = isTablet ? 1.6 : 1.2;
-const MAX_EVENTS = 2;  // 表示する予定の最大数
+const BASE_MAX_EVENTS = 5;  // ベース表示数
 
 interface WeatherInfo {
   icon?: string;
@@ -64,9 +64,16 @@ export const CalendarDay: React.FC<Props> = ({
   const stars = score !== undefined ? (colorful ? getColorfulStars(score) : getSimpleStars(score)) : null;
   const weekScale = isWeekView ? 1.3 : 1;
 
-  // 表示する予定とその他件数
-  const visibleEvents = eventTitles?.slice(0, MAX_EVENTS) || [];
-  const remainingCount = (eventTitles?.length || 0) - MAX_EVENTS;
+  // 表示可能な予定数を動的計算（天気・誕生日で使用するスロットを減算）
+  const hasWeather = showWeatherIcon && weather?.icon;
+  const hasBday = hasBirthday && birthdayNames && birthdayNames.length > 0;
+  let maxEvents = BASE_MAX_EVENTS;
+  if (hasWeather) maxEvents -= 1;
+  if (hasBday) maxEvents -= 1;
+  if (isWeekView) maxEvents = Math.max(2, maxEvents - 1);  // 週表示は少し減らす
+
+  const visibleEvents = eventTitles?.slice(0, maxEvents) || [];
+  const remainingCount = (eventTitles?.length || 0) - maxEvents;
 
   return (
     <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.6}>

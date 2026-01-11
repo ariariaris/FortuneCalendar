@@ -1,9 +1,9 @@
-// Fortune Calendar 外部カレンダー型定義 v1.0
+// Fortune Calendar 外部カレンダー型定義 v1.1
 
 /** 外部カレンダーアカウント */
 export interface ExternalCalendarAccount {
   id: string;
-  provider: 'google' | 'apple';
+  provider: 'google' | 'apple' | 'native';
   email?: string;
   displayName: string;
   accessToken: string;

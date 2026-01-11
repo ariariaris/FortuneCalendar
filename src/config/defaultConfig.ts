@@ -1,4 +1,4 @@
-// Fortune Calendar デフォルト設定 v1.1 (MMP拡張対応)
+// Fortune Calendar デフォルト設定 v1.2 (ネイティブカレンダー対応)
 import { DevConfig, UserConfig } from './types';
 
 export const DEFAULT_DEV_CONFIG: DevConfig = {
@@ -67,6 +67,10 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
     showOnCalendar: true,
     defaultTimeframe: 'year',
   },
+  nativeCalendar: {
+    enabled: false,
+    selectedCalendarIds: [],
+  },
   showSplash: true,  // 起動スプラッシュ表示
 };
 
@@ -125,4 +129,4 @@ export const FORTUNE_LIST = [
 ] as const;
 
 export const DEV_PASSCODE = '123456';
-export const APP_VERSION = '3.0p';
+export const APP_VERSION = '3.0r';

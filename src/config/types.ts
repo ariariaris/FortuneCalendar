@@ -1,4 +1,4 @@
-// Fortune Calendar 型定義 v1.1 (MMP拡張対応)
+// Fortune Calendar 型定義 v1.2 (ネイティブカレンダー対応)
 
 import { MandalaTimeframe } from '../types/mandala';
 
@@ -64,6 +64,12 @@ export interface MandalaConfig {
   defaultTimeframe: MandalaTimeframe;
 }
 
+/** ネイティブカレンダー設定（Android/iOSデバイスカレンダー） */
+export interface NativeCalendarConfig {
+  enabled: boolean;
+  selectedCalendarIds: string[];
+}
+
 /** ユーザー設定 */
 export interface UserConfig {
   userProfile: UserProfile | null;
@@ -86,6 +92,7 @@ export interface UserConfig {
   externalCalendar: ExternalCalendarConfig;
   birthday: BirthdayConfig;
   mandala: MandalaConfig;
+  nativeCalendar: NativeCalendarConfig;  // Androidデバイスカレンダー同期
   showSplash: boolean;  // 起動スプラッシュ表示
 }
 

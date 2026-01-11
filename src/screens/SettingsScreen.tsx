@@ -1,4 +1,4 @@
-// Fortune Calendar 設定画面 v2.6 (文字サイズ無効化)
+// Fortune Calendar 設定画面 v2.7 (ネイティブカレンダー同期)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
@@ -12,6 +12,7 @@ import { MyCharacter } from '../components/MyCharacter';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
 import { FontSize, DefaultTab } from '../config/types';
 import { getFontSize } from '../utils/fontUtils';
+import { requestCalendarPermission } from '../services/nativeCalendarService';
 
 const TAB_OPTIONS: { key: DefaultTab; label: string }[] = [
   { key: 'Day', label: '日' },
@@ -276,6 +277,18 @@ export const SettingsScreen: React.FC = () => {
 
         <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>連携</Text>
         <View style={s.card}>
+          {Platform.OS !== 'web' && (
+            <View style={s.row}>
+              <Text style={s.label}>📱 デバイスカレンダー同期</Text>
+              <Switch value={userConfig.nativeCalendar?.enabled ?? false} onValueChange={async (v) => {
+                if (v) {
+                  const status = await requestCalendarPermission();
+                  if (status !== 'granted') { Alert.alert('エラー', 'カレンダーへのアクセスを許可してください'); return; }
+                }
+                setUserConfig({ nativeCalendar: { ...userConfig.nativeCalendar, enabled: v, selectedCalendarIds: [] } });
+              }} />
+            </View>
+          )}
           <TouchableOpacity style={s.linkRow} onPress={() => setShowCalendarSettings(true)}>
             <Text style={s.label}>📅 外部カレンダー連携</Text>
             <Text style={s.linkArrow}>›</Text>

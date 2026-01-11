@@ -1,6 +1,6 @@
-// Fortune Calendar カレンダー画面 v2.9 (ユーザー誕生日自動表示)
+// Fortune Calendar カレンダー画面 v3.0 (ネイティブカレンダー同期)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
@@ -23,6 +23,7 @@ import { MandalaTodo } from '../types/mandala';
 import { TodoItem, MustDoItem, Dream, Goal } from '../types/goalManagement';
 import { getDateIcons } from '../utils/calendarMerge';
 import { getAreaByCode } from '../config/areaCode';
+import { fetchNativeCalendarEvents } from '../services/nativeCalendarService';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -92,6 +93,9 @@ export const CalendarScreen: React.FC = () => {
     }
   }, [wc.enabled, wc.areaCode]);
 
+  // ネイティブカレンダー設定
+  const nativeCalConfig = userConfig.nativeCalendar || { enabled: false, selectedCalendarIds: [] };
+
   // スケジュールデータ取得
   const loadScheduleData = useCallback(async () => {
     const [events, bdays, mTodos, gTodos, mItems, dList, gList] = await Promise.all([
@@ -103,14 +107,20 @@ export const CalendarScreen: React.FC = () => {
       getDreams(),
       getGoals(),
     ]);
-    setExternalEvents(events);
+    // ネイティブカレンダー（Android/iOS）イベント取得
+    let allEvents = events;
+    if (nativeCalConfig.enabled && Platform.OS !== 'web') {
+      const nativeEvents = await fetchNativeCalendarEvents(nativeCalConfig.selectedCalendarIds);
+      allEvents = [...events, ...nativeEvents];
+    }
+    setExternalEvents(allEvents);
     setBirthdays(bdays);
     setMandalaTodos(mTodos);
     setGoalTodos(gTodos);
     setMustDoItems(mItems);
     setDreams(dList);
     setGoals(gList);
-  }, []);
+  }, [nativeCalConfig.enabled, nativeCalConfig.selectedCalendarIds]);
 
   useFocusEffect(useCallback(() => {
     loadScheduleData();

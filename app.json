@@ -26,7 +26,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.READ_CONTACTS",
-        "android.permission.WRITE_CONTACTS"
+        "android.permission.WRITE_CONTACTS",
+        "android.permission.READ_CALENDAR"
       ],
       "package": "com.anonymous.FortuneCalendar"
     },
@@ -45,6 +46,12 @@
         "expo-contacts",
         {
           "contactsPermission": "誕生日表示のため連絡先へのアクセスを許可してください。"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "カレンダーの予定を表示するために使用します。"
         }
       ]
     ]

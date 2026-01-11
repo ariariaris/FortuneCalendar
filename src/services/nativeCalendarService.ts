@@ -1,5 +1,5 @@
-// Fortune Calendar ネイティブカレンダーサービス v1.0
-// Android/iOSシステムカレンダーからイベントを読み取る
+// Fortune Calendar ネイティブカレンダーサービス v2.0
+// Android/iOSシステムカレンダーの読み書き
 import { Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
 import { ExternalCalendarEvent, SYNC_CONFIG } from '../types/externalCalendar';
@@ -11,10 +11,27 @@ export interface NativeCalendar {
   color: string;
   isPrimary: boolean;
   isEnabled: boolean;
+  allowsModifications?: boolean;
 }
 
 /** パーミッション状態 */
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+
+/** 繰り返しタイプ */
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+/** イベント作成データ */
+export interface EventCreateData {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  isAllDay: boolean;
+  location?: string;
+  notes?: string;
+  calendarId: string;
+  recurrence?: RecurrenceType;
+  reminders?: number[]; // 分単位（負の値：5分前=-5）
+}
 
 const NATIVE_ACCOUNT_ID = 'native_device_calendar';
 
@@ -52,10 +69,17 @@ export const getNativeCalendars = async (): Promise<NativeCalendar[]> => {
       color: cal.color || '#4285F4',
       isPrimary: cal.isPrimary || false,
       isEnabled: true,
+      allowsModifications: cal.allowsModifications ?? true,
     }));
   } catch {
     return [];
   }
+};
+
+/** 書き込み可能なカレンダー一覧取得 */
+export const getWritableCalendars = async (): Promise<NativeCalendar[]> => {
+  const calendars = await getNativeCalendars();
+  return calendars.filter(c => c.allowsModifications !== false);
 };
 
 /** 同期範囲の日付を計算 */
@@ -164,4 +188,64 @@ export const getNativeEventsByMonth = (
 ): ExternalCalendarEvent[] => {
   const prefix = `${year}-${String(month).padStart(2, '0')}`;
   return events.filter(e => e.startTime.startsWith(prefix));
+};
+
+// =====================
+// イベント作成
+// =====================
+
+/** 繰り返しルール生成 */
+const buildRecurrenceRule = (recurrence: RecurrenceType): Calendar.RecurrenceRule | undefined => {
+  if (recurrence === 'none') return undefined;
+  const frequencyMap: Record<RecurrenceType, Calendar.Frequency> = {
+    none: Calendar.Frequency.DAILY,
+    daily: Calendar.Frequency.DAILY,
+    weekly: Calendar.Frequency.WEEKLY,
+    monthly: Calendar.Frequency.MONTHLY,
+    yearly: Calendar.Frequency.YEARLY,
+  };
+  return { frequency: frequencyMap[recurrence] };
+};
+
+/** イベント作成 */
+export const createNativeCalendarEvent = async (
+  data: EventCreateData
+): Promise<string | null> => {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') {
+      return null;
+    }
+
+    const eventDetails: Calendar.EventDetails = {
+      title: data.title,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      allDay: data.isAllDay,
+      location: data.location,
+      notes: data.notes,
+    };
+
+    // 繰り返し設定
+    if (data.recurrence && data.recurrence !== 'none') {
+      eventDetails.recurrenceRule = buildRecurrenceRule(data.recurrence);
+    }
+
+    // リマインダー設定
+    if (data.reminders && data.reminders.length > 0) {
+      eventDetails.alarms = data.reminders.map(minutes => ({
+        relativeOffset: minutes,
+      }));
+    }
+
+    const eventId = await Calendar.createEventAsync(data.calendarId, eventDetails);
+    return eventId;
+  } catch (error) {
+    console.error('イベント作成エラー:', error);
+    return null;
+  }
 };

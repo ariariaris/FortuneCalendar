@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.0 (ネイティブカレンダー同期)
+// Fortune Calendar カレンダー画面 v3.1 (予定作成機能)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import { TodoItem, MustDoItem, Dream, Goal } from '../types/goalManagement';
 import { getDateIcons } from '../utils/calendarMerge';
 import { getAreaByCode } from '../config/areaCode';
 import { fetchNativeCalendarEvents } from '../services/nativeCalendarService';
+import { EventCreateScreen } from './EventCreateScreen';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -39,6 +40,7 @@ export const CalendarScreen: React.FC = () => {
   const [viewDate, setViewDate] = useState(new Date());
   const [weather, setWeather] = useState<DayWeather[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showEventCreate, setShowEventCreate] = useState(false);
   const viewMode = userConfig.calendarViewMode || 'month';
 
   // スケジュール表示用データ
@@ -342,9 +344,16 @@ export const CalendarScreen: React.FC = () => {
       {/* タイトル */}
       <View style={s.titleBar}>
         <Text style={s.title}>Fortune Calendar</Text>
-        <TouchableOpacity style={[s.viewToggle, { backgroundColor: themeColor }]} onPress={toggleViewMode}>
-          <Text style={s.viewToggleText}>{viewMode === 'month' ? '月' : '週'}</Text>
-        </TouchableOpacity>
+        <View style={s.titleButtons}>
+          <TouchableOpacity style={[s.viewToggle, { backgroundColor: themeColor }]} onPress={toggleViewMode}>
+            <Text style={s.viewToggleText}>{viewMode === 'month' ? '月' : '週'}</Text>
+          </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity style={[s.addBtn, { backgroundColor: themeColor }]} onPress={() => setShowEventCreate(true)}>
+              <Text style={s.addBtnText}>＋</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       {/* ナビ */}
       <View style={s.header}>
@@ -433,6 +442,13 @@ export const CalendarScreen: React.FC = () => {
         </View>
       </TouchableOpacity>
     </Modal>
+    {/* 予定作成画面 */}
+    <EventCreateScreen
+      visible={showEventCreate}
+      onClose={() => setShowEventCreate(false)}
+      onSave={loadScheduleData}
+      initialDate={localSelectedDate}
+    />
     </View>
   );
 };
@@ -442,8 +458,11 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   titleBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
   title: { fontSize: 22, fontWeight: '700', color: '#1C1C1E', flex: 1, textAlign: 'center' },
+  titleButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   viewToggle: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   viewToggleText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  addBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  addBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 8, backgroundColor: '#fff' },
   dateCenter: { flex: 1, alignItems: 'center' },
   todayLink: { fontSize: 12, color: '#FF69B4', marginTop: 2 },

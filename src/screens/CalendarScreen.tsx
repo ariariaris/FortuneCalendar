@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.5 (予定テキスト表示)
+// Fortune Calendar カレンダー画面 v3.6 (スケジュール欄アイコン削除)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -473,8 +473,8 @@ export const CalendarScreen: React.FC = () => {
                   }
                 }}
               >
-                <Text style={[s.scheduleTime, { color: item.color, fontSize: getFontSize(12, fs) }]}>{item.time}</Text>
-                <Text style={[s.scheduleIcon, { fontSize: getFontSize(16, fs) }]}>{item.icon}</Text>
+                <Text style={[s.scheduleTime, { fontSize: getFontSize(12, fs) }]}>{item.time}</Text>
+                <View style={[s.scheduleDot, { backgroundColor: item.color }]} />
                 <Text style={[s.scheduleTitle, { fontSize: getFontSize(14, fs) }]} numberOfLines={1}>{item.title}</Text>
                 {item.event && Platform.OS !== 'web' && <Text style={s.scheduleArrow}>›</Text>}
               </TouchableOpacity>
@@ -575,7 +575,7 @@ const s = StyleSheet.create({
   noSchedule: { fontSize: 14, color: '#999', textAlign: 'center', paddingVertical: 16 },
   scheduleItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#E5E5E5' },
   scheduleTime: { fontSize: 12, fontWeight: '600', width: 50 },
-  scheduleIcon: { fontSize: 16, marginHorizontal: 8 },
+  scheduleDot: { width: 10, height: 10, borderRadius: 5, marginHorizontal: 8 },
   scheduleTitle: { flex: 1, fontSize: 14, color: '#333' },
   scheduleArrow: { fontSize: 18, color: '#999', marginLeft: 8 },
 });

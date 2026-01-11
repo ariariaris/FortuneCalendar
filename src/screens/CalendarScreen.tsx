@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.4 (予定編集・削除対応)
+// Fortune Calendar カレンダー画面 v3.5 (予定テキスト表示)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -221,6 +221,36 @@ export const CalendarScreen: React.FC = () => {
     return items;
   }, [localSelectedDate, externalEvents, birthdays, mandalaTodos, goalTodos, mustDoItems, dreams, goals]);
 
+  // 日付ごとの予定タイトル取得（カレンダー表示用）
+  const getEventTitlesForDate = useCallback((dateStr: string): { title: string; color?: string }[] => {
+    const titles: { title: string; color?: string }[] = [];
+    // 外部カレンダーイベント
+    externalEvents
+      .filter(e => e.startTime.split('T')[0] === dateStr)
+      .forEach(e => titles.push({ title: e.title, color: e.calendarColor }));
+    // マンダラTodo
+    mandalaTodos
+      .filter(t => t.deadline?.startsWith(dateStr) && !t.isCompleted)
+      .forEach(t => titles.push({ title: t.title, color: '#8B5CF6' }));
+    // MustDo
+    mustDoItems
+      .filter(mi => mi.deadline === dateStr && mi.status !== 'completed')
+      .forEach(mi => titles.push({ title: mi.title, color: '#FF9800' }));
+    // 目標Todo
+    goalTodos
+      .filter(t => t.date === dateStr && !t.isCompleted)
+      .forEach(t => titles.push({ title: t.title, color: '#2196F3' }));
+    // 夢
+    dreams
+      .filter(dr => dr.deadline?.startsWith(dateStr))
+      .forEach(dr => titles.push({ title: dr.title, color: '#FFD700' }));
+    // 目標
+    goals
+      .filter(g => g.deadline?.startsWith(dateStr) && g.status !== 'completed')
+      .forEach(g => titles.push({ title: g.title, color: '#FF69B4' }));
+    return titles;
+  }, [externalEvents, mandalaTodos, mustDoItems, goalTodos, dreams, goals]);
+
   // 有効な占いの平均スコア計算
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const currentFortune = enabledFortunes[0] || 'honDoubutsu';
@@ -307,8 +337,8 @@ export const CalendarScreen: React.FC = () => {
         <CalendarDay key={i} day={dayNum} dayOfWeek={i} isToday={checkIsToday(d)}
           isSelected={localSelectedDate === dateStr} score={score} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
-          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
-          hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
+          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames}
+          eventTitles={getEventTitlesForDate(dateStr)}
           onPress={() => handleDayPress(dayNum, m, y)} onLongPress={() => handleDayLongPress(dayNum, m, y)} isWeekView />
       );
     }
@@ -343,8 +373,8 @@ export const CalendarScreen: React.FC = () => {
         <CalendarDay key={d} day={d} dayOfWeek={dayOfWeek} isToday={checkIsToday(date)}
           isSelected={localSelectedDate === dateStr} score={monthScores[d]} colorful={colorful}
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
-          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
-          hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
+          hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames}
+          eventTitles={getEventTitlesForDate(dateStr)}
           onPress={() => handleDayPress(d)} onLongPress={() => handleDayLongPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }

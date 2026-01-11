@@ -1,16 +1,22 @@
-// Fortune Calendar カレンダー日付 v2.3 (長押し対応)
+// Fortune Calendar カレンダー日付 v3.0 (予定テキスト表示)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 const SCALE = isTablet ? 1.6 : 1.2;
+const MAX_EVENTS = 2;  // 表示する予定の最大数
 
 interface WeatherInfo {
   icon?: string;
   tempMax?: number;
   tempMin?: number;
   rainChance?: number;
+}
+
+interface EventTitle {
+  title: string;
+  color?: string;
 }
 
 interface Props {
@@ -27,16 +33,11 @@ interface Props {
   onPress: () => void;
   onLongPress?: () => void;
   isWeekView?: boolean;
-  // イベントアイコン
+  // イベント表示
+  eventTitles?: EventTitle[];
+  // 誕生日
   hasBirthday?: boolean;
   birthdayNames?: string[];
-  hasExternal?: boolean;
-  hasMandala?: boolean;
-  // 目標管理アイコン
-  hasDream?: boolean;
-  hasGoal?: boolean;
-  hasMustDo?: boolean;
-  hasTodo?: boolean;
 }
 
 const getColorfulStars = (score: number): { count: number; color: string } => {
@@ -54,64 +55,85 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
-  showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, onLongPress, isWeekView,
-  hasBirthday, birthdayNames, hasExternal, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo,
+  showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true,
+  onPress, onLongPress, isWeekView, eventTitles, hasBirthday, birthdayNames,
 }) => {
   if (day === 0) return <View style={s.cell} />;
 
   const textColor = dayOfWeek === 0 ? '#FF3B30' : dayOfWeek === 6 ? '#007AFF' : '#1C1C1E';
   const stars = score !== undefined ? (colorful ? getColorfulStars(score) : getSimpleStars(score)) : null;
   const weekScale = isWeekView ? 1.3 : 1;
-  const hasGoalItems = hasDream || hasGoal || hasMustDo || hasTodo;
+
+  // 表示する予定とその他件数
+  const visibleEvents = eventTitles?.slice(0, MAX_EVENTS) || [];
+  const remainingCount = (eventTitles?.length || 0) - MAX_EVENTS;
 
   return (
     <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.6}>
-      <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected, isWeekView && { width: 28 * SCALE, height: 28 * SCALE, borderRadius: 14 * SCALE }]}>
-        <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 12 * SCALE * weekScale }]}>{day}</Text>
+      {/* 日付と運勢 */}
+      <View style={s.topRow}>
+        <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected]}>
+          <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 12 * SCALE * weekScale }]}>{day}</Text>
+        </View>
+        {stars && <Text style={[s.stars, { color: stars.color, fontSize: 7 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
       </View>
-      {stars && <Text style={[s.stars, { color: stars.color, fontSize: 8 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
+
+      {/* 天気 */}
+      {showWeatherIcon && weather?.icon && (
+        <View style={s.weatherRow}>
+          <Text style={{ fontSize: 12 * SCALE * weekScale }}>{weather.icon}</Text>
+          {showWeatherTemp && weather.tempMax !== undefined && (
+            <Text style={[s.temp, { fontSize: 8 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
+          )}
+          {showWeatherRain && weather.rainChance !== undefined && weather.rainChance > 0 && (
+            <Text style={[s.rain, { fontSize: 8 * SCALE * weekScale }]}>{weather.rainChance}%</Text>
+          )}
+        </View>
+      )}
+
+      {/* 誕生日 */}
       {hasBirthday && birthdayNames && birthdayNames.length > 0 && (
-        <View style={s.birthdayBox}>
-          <Text style={s.birthdayName} numberOfLines={2}>{birthdayNames.join('\n')}</Text>
+        <View style={s.eventRow}>
           <Text style={s.eventIcon}>🎂</Text>
+          <Text style={[s.eventText, { color: '#FF69B4' }]} numberOfLines={1}>
+            {birthdayNames[0]}
+          </Text>
         </View>
       )}
-      {(hasExternal || hasMandala || hasGoalItems) && (
-        <View style={s.eventIcons}>
-          {hasExternal && <Text style={s.eventIcon}>📅</Text>}
-          {hasMandala && <Text style={s.eventIcon}>🎯</Text>}
-          {hasDream && <Text style={s.eventIcon}>🌟</Text>}
-          {hasGoal && <Text style={s.eventIcon}>🏆</Text>}
-          {hasMustDo && <Text style={s.eventIcon}>🔥</Text>}
-          {hasTodo && <Text style={s.eventIcon}>✅</Text>}
+
+      {/* 予定テキスト表示 */}
+      {visibleEvents.map((ev, idx) => (
+        <View key={idx} style={s.eventRow}>
+          <View style={[s.eventDot, { backgroundColor: ev.color || '#4285F4' }]} />
+          <Text style={s.eventText} numberOfLines={1}>{ev.title}</Text>
         </View>
-      )}
-      {showWeatherIcon && weather?.icon && <Text style={[s.weatherIcon, { fontSize: 16 * SCALE * weekScale }]}>{weather.icon}</Text>}
-      {showWeatherTemp && weather?.tempMax !== undefined && (
-        <Text style={[s.temp, { fontSize: 9 * SCALE * weekScale }]}>{weather.tempMax}°</Text>
-      )}
-      {showWeatherRain && weather?.rainChance !== undefined && weather.rainChance > 0 && (
-        <Text style={[s.rain, { fontSize: 9 * SCALE * weekScale }]}>{weather.rainChance}%</Text>
+      ))}
+
+      {/* 他X件 */}
+      {remainingCount > 0 && (
+        <Text style={s.moreText}>他{remainingCount}件</Text>
       )}
     </TouchableOpacity>
   );
 };
 
 const s = StyleSheet.create({
-  cell: { flex: 1, aspectRatio: 0.62, alignItems: 'center', paddingTop: 4 * SCALE, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
-  weekCell: { aspectRatio: 0.50, paddingTop: 8 * SCALE },
+  cell: { flex: 1, aspectRatio: 0.45, paddingTop: 3, paddingHorizontal: 2, borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
+  weekCell: { aspectRatio: 0.40, paddingTop: 6 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   dayWrap: { width: 20 * SCALE, height: 20 * SCALE, borderRadius: 10 * SCALE, alignItems: 'center', justifyContent: 'center' },
   today: { backgroundColor: '#FF2D55' },
   selected: { backgroundColor: '#007AFF' },
   dayText: { fontSize: 12 * SCALE, fontWeight: '500' },
-  stars: { fontSize: 7 * SCALE, marginTop: 2, letterSpacing: -1 },
-  birthdayBox: { alignItems: 'center', marginTop: 2 },
-  birthdayName: { fontSize: 7 * SCALE, color: '#FF69B4', textAlign: 'center' },
-  eventIcons: { flexDirection: 'row', marginTop: 2 },
-  eventIcon: { fontSize: 9 * SCALE },
-  weatherIcon: { fontSize: 16 * SCALE, marginTop: 3 },
-  temp: { fontSize: 9 * SCALE, color: '#FF6B6B', fontWeight: '600', marginTop: 1 },
-  rain: { fontSize: 9 * SCALE, color: '#4A90D9', marginTop: 1 },
+  stars: { fontSize: 6 * SCALE, letterSpacing: -1 },
+  weatherRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 2 },
+  temp: { color: '#FF6B6B', fontWeight: '600' },
+  rain: { color: '#4A90D9' },
+  eventRow: { flexDirection: 'row', alignItems: 'center', marginTop: 1 },
+  eventDot: { width: 6, height: 6, borderRadius: 3, marginRight: 3 },
+  eventIcon: { fontSize: 8, marginRight: 2 },
+  eventText: { fontSize: 9, color: '#333', flex: 1 },
+  moreText: { fontSize: 8, color: '#999', marginTop: 1 },
 });
 
 export default CalendarDay;

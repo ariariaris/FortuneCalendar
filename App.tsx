@@ -1,4 +1,4 @@
-// Fortune Calendar v3.0i (3ボタン地域選択)
+// Fortune Calendar v3.0y (タブアイコン変更)
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -80,7 +80,7 @@ export default function App() {
           options={{
             title: '月',
             headerShown: false,
-            tabBarIcon: ({ focused }) => <TabIcon name="📅" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon name="🗓️" focused={focused} />,
           }}
         />
         <Tab.Screen
@@ -89,7 +89,7 @@ export default function App() {
           options={{
             title: '年',
             headerShown: false,
-            tabBarIcon: ({ focused }) => <TabIcon name="📆" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon name="🗒️" focused={focused} />,
           }}
         />
         <Tab.Screen

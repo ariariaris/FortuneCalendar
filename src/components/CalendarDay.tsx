@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー日付 v2.2 (夢・目標アイコン対応)
+// Fortune Calendar カレンダー日付 v2.3 (長押し対応)
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
@@ -25,6 +25,7 @@ interface Props {
   showWeatherTemp?: boolean;
   showWeatherRain?: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
   isWeekView?: boolean;
   // イベントアイコン
   hasBirthday?: boolean;
@@ -53,7 +54,7 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
-  showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, isWeekView,
+  showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true, onPress, onLongPress, isWeekView,
   hasBirthday, birthdayNames, hasExternal, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo,
 }) => {
   if (day === 0) return <View style={s.cell} />;
@@ -64,7 +65,7 @@ export const CalendarDay: React.FC<Props> = ({
   const hasGoalItems = hasDream || hasGoal || hasMustDo || hasTodo;
 
   return (
-    <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} activeOpacity={0.6}>
+    <TouchableOpacity style={[s.cell, isWeekView && s.weekCell]} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.6}>
       <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected, isWeekView && { width: 28 * SCALE, height: 28 * SCALE, borderRadius: 14 * SCALE }]}>
         <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 12 * SCALE * weekScale }]}>{day}</Text>
       </View>

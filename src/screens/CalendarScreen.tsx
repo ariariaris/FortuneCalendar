@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.1 (予定作成機能)
+// Fortune Calendar カレンダー画面 v3.2 (日付長押しで予定作成)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -259,6 +259,14 @@ export const CalendarScreen: React.FC = () => {
     navigation.navigate('Day');
   };
 
+  // 日付長押しで予定作成（Android/iOSのみ）
+  const handleDayLongPress = (day: number, m?: number, y?: number) => {
+    if (Platform.OS === 'web') return;
+    const date = formatDate(new Date(y ?? year, m ?? month, day));
+    setLocalSelectedDate(date);
+    setShowEventCreate(true);
+  };
+
   // 週の開始日を取得（日曜始まり）
   const getWeekStart = (d: Date) => {
     const date = new Date(d);
@@ -289,7 +297,7 @@ export const CalendarScreen: React.FC = () => {
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
-          onPress={() => handleDayPress(dayNum, m, y)} isWeekView />
+          onPress={() => handleDayPress(dayNum, m, y)} onLongPress={() => handleDayLongPress(dayNum, m, y)} isWeekView />
       );
     }
     return <View style={s.week}>{week}</View>;
@@ -325,7 +333,7 @@ export const CalendarScreen: React.FC = () => {
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames} hasExternal={icons.hasExternal} hasMandala={icons.hasMandala}
           hasDream={icons.hasDream} hasGoal={icons.hasGoal} hasMustDo={icons.hasMustDo} hasTodo={icons.hasTodo}
-          onPress={() => handleDayPress(d)} />
+          onPress={() => handleDayPress(d)} onLongPress={() => handleDayLongPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }
     }
@@ -406,7 +414,9 @@ export const CalendarScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           {scheduleItems.length === 0 ? (
-            <Text style={[s.noSchedule, { fontSize: getFontSize(14, fs) }]}>予定はありません</Text>
+            <TouchableOpacity onLongPress={() => Platform.OS !== 'web' && setShowEventCreate(true)} activeOpacity={1}>
+              <Text style={[s.noSchedule, { fontSize: getFontSize(14, fs) }]}>予定はありません</Text>
+            </TouchableOpacity>
           ) : (
             scheduleItems.map((item, idx) => (
               <View key={idx} style={s.scheduleItem}>

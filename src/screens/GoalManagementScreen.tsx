@@ -1,4 +1,4 @@
-// Fortune Calendar 目標管理画面 v2.8 (リマインダー追加)
+// Fortune Calendar 夢への第一歩 v2.9 (Todoタブ非表示)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem, TodoItem, MustDoPriority, GoalDeadlineDefault, DurationConfig, DurationUnit } from '../types/goalManagement';
@@ -40,9 +40,9 @@ const getDeadlineFromDuration = (dur: DurationConfig, deadlineType: GoalDeadline
   return `${targetYear}/12/31`;
 };
 
+// Todoタブは将来別の場所に移設予定のため非表示
 const TABS: { key: TabType; label: string; color: string }[] = [
   { key: 'tree', label: '夢の木', color: '#FF69B4' },
-  { key: 'todo', label: 'Todo', color: '#2196F3' },
 ];
 
 export const GoalManagementScreen: React.FC = () => {
@@ -281,15 +281,18 @@ export const GoalManagementScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.title, { fontSize: getFontSize(20, fs) }]}>目標管理</Text>
+        <Text style={[styles.title, { fontSize: getFontSize(20, fs) }]}>夢への第一歩</Text>
       </View>
-      <View style={styles.tabs}>
-        {TABS.map(tab => (
-          <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && { backgroundColor: tab.color }]}>
-            <Text style={[styles.tabText, { fontSize: getFontSize(14, fs) }, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* タブが複数ある場合のみ表示 */}
+      {TABS.length > 1 && (
+        <View style={styles.tabs}>
+          {TABS.map(tab => (
+            <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && { backgroundColor: tab.color }]}>
+              <Text style={[styles.tabText, { fontSize: getFontSize(14, fs) }, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
       <View style={styles.content}>{renderContent()}</View>
       {renderModal()}
     </SafeAreaView>

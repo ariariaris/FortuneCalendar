@@ -1,4 +1,6 @@
-// Fortune Calendar 地域コード v2.0 (緯度経度ベース・23区対応)
+// Fortune Calendar 地域コード v2.1 (expo-location対応)
+import { Platform } from 'react-native';
+import * as Location from 'expo-location';
 
 export interface Area {
   code: string;
@@ -133,16 +135,26 @@ export const getPrefectureByCode = (code: string): Prefecture | undefined => {
   return PREFECTURES.find(p => p.areas.some(a => a.code === code));
 };
 
-/** GPS位置取得 */
-export const getCurrentPosition = (): Promise<{ lat: number; lon: number }> => {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      (err) => reject(err),
-      { timeout: 10000 }
-    );
-  });
+/** GPS位置取得 (Web/iOS/Android対応) */
+export const getCurrentPosition = async (): Promise<{ lat: number; lon: number }> => {
+  if (Platform.OS === 'web') {
+    // Web: navigator.geolocation使用
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        (err) => reject(err),
+        { timeout: 10000 }
+      );
+    });
+  }
+  // iOS/Android: expo-location使用
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error('Location permission denied');
+  }
+  const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+  return { lat: location.coords.latitude, lon: location.coords.longitude };
 };
 
 /** 緯度経度から最寄りエリアコード取得 */

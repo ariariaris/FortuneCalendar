@@ -1,128 +1,117 @@
-// Fortune Calendar 時間入力コンポーネント v1.0
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
+// Fortune Calendar 時間入力コンポーネント v2.0 (ネイティブ風Picker)
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, ScrollView } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { TimeUnit } from '../../types/goalManagement';
 
-const VALUE_PRESETS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240];
-const UNITS: { key: TimeUnit; label: string }[] = [
-  { key: 'minute', label: '分' },
-  { key: 'hour', label: '時間' },
-];
+const MINUTE_VALUES = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 240, 300, 360];
+const HOUR_VALUES = [1, 2, 3, 4, 5, 6, 8, 10, 12, 24];
 
 interface Props {
   label?: string;
-  minutes: number;  // 分単位で保存
+  minutes: number;
   onChange: (minutes: number) => void;
   accentColor?: string;
 }
 
 export const TimeInput: React.FC<Props> = ({ label, minutes, onChange, accentColor = '#2196F3' }) => {
-  // 時間/分に変換
-  const isHour = minutes >= 60 && minutes % 60 === 0;
-  const displayValue = isHour ? minutes / 60 : minutes;
-  const displayUnit: TimeUnit = isHour ? 'hour' : 'minute';
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempMinutes, setTempMinutes] = useState(minutes);
 
-  const [showValuePicker, setShowValuePicker] = useState(false);
-  const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [inputText, setInputText] = useState(String(displayValue));
-  const [unit, setUnit] = useState<TimeUnit>(displayUnit);
-
-  useEffect(() => {
-    const isH = minutes >= 60 && minutes % 60 === 0;
-    setInputText(String(isH ? minutes / 60 : minutes));
-    setUnit(isH ? 'hour' : 'minute');
-  }, [minutes]);
-
-  const handleValueChange = (text: string) => {
-    setInputText(text);
-    const num = parseInt(text, 10);
-    if (!isNaN(num) && num > 0 && num <= 999) {
-      onChange(unit === 'hour' ? num * 60 : num);
-    }
+  // 表示用フォーマット
+  const formatDisplay = (m: number): string => {
+    if (m >= 60 && m % 60 === 0) return `${m / 60}時間`;
+    if (m >= 60) return `${Math.floor(m / 60)}時間${m % 60}分`;
+    return `${m}分`;
   };
 
-  const handleValueSelect = (num: number) => {
-    // プリセットは分単位なので、時間選択中は60で割る
-    const val = unit === 'hour' ? Math.round(num / 60) || 1 : num;
-    setInputText(String(val));
-    onChange(unit === 'hour' ? val * 60 : val);
-    setShowValuePicker(false);
+  const handleConfirm = () => {
+    onChange(tempMinutes);
+    setShowPicker(false);
   };
 
-  const handleUnitSelect = (newUnit: TimeUnit) => {
-    const currentMinutes = unit === 'hour' ? parseInt(inputText) * 60 : parseInt(inputText);
-    setUnit(newUnit);
-    if (newUnit === 'hour') {
-      const hours = Math.max(1, Math.round(currentMinutes / 60));
-      setInputText(String(hours));
-      onChange(hours * 60);
-    } else {
-      setInputText(String(currentMinutes));
-      onChange(currentMinutes);
-    }
-    setShowUnitPicker(false);
+  const handleCancel = () => {
+    setTempMinutes(minutes);
+    setShowPicker(false);
   };
 
-  const unitLabel = UNITS.find(u => u.key === unit)?.label || '分';
-  const presets = unit === 'hour' ? [1, 2, 3, 4, 5, 6, 8, 10, 12] : VALUE_PRESETS;
+  // Web用のカスタムピッカー
+  const renderWebPicker = () => (
+    <Modal visible={showPicker} transparent animationType="fade" onRequestClose={handleCancel}>
+      <View style={styles.overlay}>
+        <TouchableOpacity style={styles.backdrop} onPress={handleCancel} />
+        <View style={styles.webContent}>
+          <Text style={styles.title}>所要時間を選択</Text>
+          <ScrollView style={styles.webList}>
+            {[...MINUTE_VALUES, ...HOUR_VALUES.map(h => h * 60)].sort((a, b) => a - b).filter((v, i, arr) => arr.indexOf(v) === i).map(v => (
+              <TouchableOpacity key={v} style={[styles.webItem, tempMinutes === v && { backgroundColor: accentColor }]} onPress={() => { onChange(v); setShowPicker(false); }}>
+                <Text style={[styles.webItemText, tempMinutes === v && styles.webItemTextActive]}>{formatDisplay(v)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleCancel}>
+            <Text style={styles.closeBtnText}>閉じる</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // iOS用のアクションシート風ピッカー
+  const renderIOSPicker = () => (
+    <Modal visible={showPicker} transparent animationType="slide" onRequestClose={handleCancel}>
+      <View style={styles.iosOverlay}>
+        <TouchableOpacity style={styles.backdrop} onPress={handleCancel} />
+        <View style={styles.iosContent}>
+          <View style={styles.iosHeader}>
+            <TouchableOpacity onPress={handleCancel}>
+              <Text style={styles.cancelText}>キャンセル</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>所要時間</Text>
+            <TouchableOpacity onPress={handleConfirm}>
+              <Text style={[styles.doneText, { color: accentColor }]}>完了</Text>
+            </TouchableOpacity>
+          </View>
+          <Picker selectedValue={tempMinutes} onValueChange={setTempMinutes} style={styles.picker}>
+            {[5, 10, 15, 20, 30, 45].map(v => <Picker.Item key={v} label={`${v}分`} value={v} />)}
+            {[1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12].map(h => <Picker.Item key={h * 60} label={h % 1 === 0 ? `${h}時間` : `${Math.floor(h)}時間${(h % 1) * 60}分`} value={h * 60} />)}
+          </Picker>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Android用のダイアログ風ピッカー
+  const renderAndroidPicker = () => (
+    <Modal visible={showPicker} transparent animationType="fade" onRequestClose={handleCancel}>
+      <View style={styles.overlay}>
+        <TouchableOpacity style={styles.backdrop} onPress={handleCancel} />
+        <View style={styles.androidContent}>
+          <Text style={styles.androidTitle}>所要時間を選択</Text>
+          <Picker selectedValue={tempMinutes} onValueChange={(v) => { onChange(v); setShowPicker(false); }} style={styles.androidPicker}>
+            {[5, 10, 15, 20, 30, 45].map(v => <Picker.Item key={v} label={`${v}分`} value={v} />)}
+            {[1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12].map(h => <Picker.Item key={h * 60} label={h % 1 === 0 ? `${h}時間` : `${Math.floor(h)}時間${(h % 1) * 60}分`} value={h * 60} />)}
+          </Picker>
+          <View style={styles.androidActions}>
+            <TouchableOpacity onPress={handleCancel} style={styles.androidBtn}>
+              <Text style={styles.cancelText}>キャンセル</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.row}>
-        <View style={styles.valueContainer}>
-          <TextInput
-            style={[styles.valueInput, { borderColor: accentColor }]}
-            value={inputText}
-            onChangeText={handleValueChange}
-            keyboardType="number-pad"
-            maxLength={3}
-          />
-          <TouchableOpacity style={[styles.pickerBtn, { backgroundColor: accentColor }]} onPress={() => setShowValuePicker(true)}>
-            <Text style={styles.pickerBtnText}>▼</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={[styles.unitBtn, { borderColor: accentColor }]} onPress={() => setShowUnitPicker(true)}>
-          <Text style={[styles.unitText, { color: accentColor }]}>{unitLabel}</Text>
-          <Text style={styles.unitArrow}>▼</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={showValuePicker} transparent animationType="fade" onRequestClose={() => setShowValuePicker(false)}>
-        <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setShowValuePicker(false)} />
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{unit === 'hour' ? '時間' : '分'}を選択</Text>
-            <ScrollView style={styles.optionList} contentContainerStyle={styles.optionGrid}>
-              {presets.map(num => (
-                <TouchableOpacity key={num} style={[styles.optionItem, parseInt(inputText) === num && { backgroundColor: accentColor }]} onPress={() => handleValueSelect(unit === 'hour' ? num * 60 : num)}>
-                  <Text style={[styles.optionText, parseInt(inputText) === num && styles.optionTextActive]}>{num}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowValuePicker(false)}>
-              <Text style={styles.closeBtnText}>閉じる</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showUnitPicker} transparent animationType="fade" onRequestClose={() => setShowUnitPicker(false)}>
-        <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setShowUnitPicker(false)} />
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>単位を選択</Text>
-            {UNITS.map(u => (
-              <TouchableOpacity key={u.key} style={[styles.unitOption, unit === u.key && { backgroundColor: accentColor }]} onPress={() => handleUnitSelect(u.key)}>
-                <Text style={[styles.unitOptionText, unit === u.key && styles.optionTextActive]}>{u.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowUnitPicker(false)}>
-              <Text style={styles.closeBtnText}>閉じる</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TouchableOpacity style={[styles.button, { borderColor: accentColor }]} onPress={() => { setTempMinutes(minutes); setShowPicker(true); }}>
+        <Text style={[styles.buttonText, { color: accentColor }]}>{formatDisplay(minutes)}</Text>
+        <Text style={styles.arrow}>▼</Text>
+      </TouchableOpacity>
+      {Platform.OS === 'web' && renderWebPicker()}
+      {Platform.OS === 'ios' && renderIOSPicker()}
+      {Platform.OS === 'android' && renderAndroidPicker()}
     </View>
   );
 };
@@ -130,25 +119,28 @@ export const TimeInput: React.FC<Props> = ({ label, minutes, onChange, accentCol
 const styles = StyleSheet.create({
   container: { marginBottom: 12 },
   label: { fontSize: 13, color: '#666', marginBottom: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  valueContainer: { flexDirection: 'row', alignItems: 'center' },
-  valueInput: { width: 60, borderWidth: 2, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, fontSize: 16, textAlign: 'center', backgroundColor: '#fff' },
-  pickerBtn: { marginLeft: 4, paddingHorizontal: 8, paddingVertical: 10, borderRadius: 6 },
-  pickerBtnText: { color: '#fff', fontSize: 10 },
-  unitBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#fff' },
-  unitText: { fontSize: 16, fontWeight: '600', marginRight: 4 },
-  unitArrow: { fontSize: 10, color: '#999' },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff' },
+  buttonText: { fontSize: 16, fontWeight: '600' },
+  arrow: { fontSize: 12, color: '#999' },
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '80%', maxWidth: 280 },
-  modalTitle: { fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
-  optionList: { maxHeight: 200 },
-  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  optionItem: { width: 55, paddingVertical: 12, borderRadius: 8, backgroundColor: '#f0f0f0', alignItems: 'center' },
-  optionText: { fontSize: 16, color: '#333' },
-  optionTextActive: { color: '#fff', fontWeight: '600' },
-  unitOption: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#f0f0f0', marginBottom: 8, alignItems: 'center' },
-  unitOptionText: { fontSize: 16, color: '#333' },
-  closeBtn: { marginTop: 8, paddingVertical: 10, backgroundColor: '#eee', borderRadius: 8, alignItems: 'center' },
+  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  iosOverlay: { flex: 1, justifyContent: 'flex-end' },
+  iosContent: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 20 },
+  iosHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  title: { fontSize: 16, fontWeight: '600', color: '#333' },
+  cancelText: { fontSize: 16, color: '#666' },
+  doneText: { fontSize: 16, fontWeight: '600' },
+  picker: { height: 200 },
+  androidContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '80%', maxWidth: 300 },
+  androidTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' },
+  androidPicker: { height: 150 },
+  androidActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 },
+  androidBtn: { paddingHorizontal: 16, paddingVertical: 8 },
+  webContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '80%', maxWidth: 280 },
+  webList: { maxHeight: 250 },
+  webItem: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#f5f5f5', marginBottom: 6, alignItems: 'center' },
+  webItemText: { fontSize: 16, color: '#333' },
+  webItemTextActive: { color: '#fff', fontWeight: '600' },
+  closeBtn: { marginTop: 12, paddingVertical: 10, backgroundColor: '#eee', borderRadius: 8, alignItems: 'center' },
   closeBtnText: { color: '#666', fontSize: 14 },
 });

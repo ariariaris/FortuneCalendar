@@ -1,6 +1,7 @@
-// Fortune Calendar 占い結果画面 v2.4 (文字サイズ対応)
-import React, { useMemo, useRef } from 'react';
+// Fortune Calendar 占い結果画面 v2.5 (Todo統合)
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
 import { getAllPlugins } from '../fortunes';
@@ -9,6 +10,8 @@ import { getFontSize } from '../utils/fontUtils';
 import { HexChart } from '../components/HexChart';
 import { LuckyInfo } from '../components/LuckyInfo';
 import { FortuneDetailCards } from '../components/FortuneCard';
+import { DailyTodoList } from '../components/fortune/DailyTodoList';
+import { DailyTodo } from '../types/dailyTodo';
 import { displayDateWithDay, parseDate, addDays, formatDate, today } from '../utils/dateUtils';
 import { starsDisplay } from '../utils/fortuneUtils';
 import { MyCharacter } from '../components/MyCharacter';
@@ -18,6 +21,18 @@ import { Image } from 'react-native';
 
 const SWIPE_THRESHOLD = 50;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const STORAGE_KEY = 'fortune_daily_todos';
+
+// Todo永続化
+const loadTodos = async (): Promise<DailyTodo[]> => {
+  try {
+    const json = await AsyncStorage.getItem(STORAGE_KEY);
+    return json ? JSON.parse(json) : [];
+  } catch { return []; }
+};
+const saveTodos = async (todos: DailyTodo[]) => {
+  try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todos)); } catch {}
+};
 
 export const FortuneScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -25,6 +40,45 @@ export const FortuneScreen: React.FC = () => {
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];
   const profile = userConfig.userProfile || undefined;
   const fs = userConfig.fontSize || 'md';
+
+  // Todo状態
+  const [todos, setTodos] = useState<DailyTodo[]>([]);
+  const todayStr = today();
+
+  // 初回読み込み＆古いlucky削除
+  useEffect(() => {
+    (async () => {
+      const loaded = await loadTodos();
+      // luckyタイプで今日以外のものを削除
+      const filtered = loaded.filter(t => t.type === 'user' || t.date === todayStr);
+      if (filtered.length !== loaded.length) await saveTodos(filtered);
+      setTodos(filtered);
+    })();
+  }, [todayStr]);
+
+  // Todo操作
+  const addTodo = useCallback((title: string, type: 'lucky' | 'user' = 'user') => {
+    const newTodo: DailyTodo = { id: Date.now().toString(), title, type, date: todayStr, completed: false };
+    setTodos(prev => { const updated = [...prev, newTodo]; saveTodos(updated); return updated; });
+  }, [todayStr]);
+
+  const toggleTodo = useCallback((id: string) => {
+    setTodos(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : undefined } : t);
+      saveTodos(updated);
+      return updated;
+    });
+  }, []);
+
+  const deleteTodo = useCallback((id: string) => {
+    setTodos(prev => { const updated = prev.filter(t => t.id !== id); saveTodos(updated); return updated; });
+  }, []);
+
+  const addLuckyTodo = useCallback((title: string) => {
+    // 同じタイトルのluckyが既にあればスキップ
+    if (todos.some(t => t.type === 'lucky' && t.title === title && t.date === todayStr)) return;
+    addTodo(title, 'lucky');
+  }, [todos, todayStr, addTodo]);
 
   // 日付refで最新値を追跡
   const dateRef = useRef(selectedDate);
@@ -58,7 +112,6 @@ export const FortuneScreen: React.FC = () => {
   const result = useMemo(() => {
     const plugins = getAllPlugins().filter((p) => enabledFortunes.includes(p.id));
     if (plugins.length === 0) return null;
-
     const results = plugins.map((p) => p.generate(selectedDate, profile));
     const avgScores: FortuneScores = {
       love: Math.round(results.reduce((sum, r) => sum + r.scores.love, 0) / results.length),
@@ -68,15 +121,8 @@ export const FortuneScreen: React.FC = () => {
       social: Math.round(results.reduce((sum, r) => sum + r.scores.social, 0) / results.length),
       total: Math.round(results.reduce((sum, r) => sum + r.scores.total, 0) / results.length),
     };
-
-    // 詳細テキストは最初の占術のものを使用
     const baseResult = results[0];
-    return {
-      scores: avgScores,
-      details: baseResult.details,
-      lucky: baseResult.lucky,
-      character: baseResult.character,
-    };
+    return { scores: avgScores, details: baseResult.details, lucky: baseResult.lucky, character: baseResult.character };
   }, [enabledFortunes, selectedDate, profile]);
 
   const dateDisplay = displayDateWithDay(parseDate(selectedDate));
@@ -85,12 +131,7 @@ export const FortuneScreen: React.FC = () => {
   const dailyAdvice = useMemo(() => {
     if (!result) return '';
     const mainFortune = enabledFortunes[0] || 'honDoubutsu';
-    const typeKey = extractTypeKey(
-      mainFortune,
-      result.details.total,
-      result.character?.name,
-      userConfig.userProfile?.bloodType
-    );
+    const typeKey = extractTypeKey(mainFortune, result.details.total, result.character?.name, userConfig.userProfile?.bloodType);
     return generateDailyAdvice(mainFortune, typeKey, result.scores.total, selectedDate);
   }, [result, enabledFortunes, selectedDate, userConfig.userProfile?.bloodType]);
 
@@ -99,7 +140,6 @@ export const FortuneScreen: React.FC = () => {
   const goToNextDay = () => setSelectedDate(formatDate(addDays(parseDate(selectedDate), 1)));
   const goToToday = () => setSelectedDate(today());
   const isCurrentDay = selectedDate === today();
-
   const currentMonth = parseDate(selectedDate).getMonth() + 1;
 
   if (!result) return <View style={s.container}><Text>読み込み中...</Text></View>;
@@ -107,24 +147,15 @@ export const FortuneScreen: React.FC = () => {
   return (
     <View style={[s.safeArea, { paddingTop: insets.top }]}>
       <Animated.View style={[s.container, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
-        {/* タイトルバー */}
-        <View style={s.titleBar}>
-          <Text style={s.title}>Fortune Calendar</Text>
-        </View>
-        {/* 日付ナビ */}
+        <View style={s.titleBar}><Text style={s.title}>Fortune Calendar</Text></View>
         <View style={s.header}>
-          <TouchableOpacity onPress={goToPrevDay} style={s.navBtn}>
-            <Text style={s.navIcon}>‹</Text>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={goToPrevDay} style={s.navBtn}><Text style={s.navIcon}>‹</Text></TouchableOpacity>
           <TouchableOpacity onPress={goToToday} style={s.dateCenter}>
             <Text style={[s.dateText, { fontSize: getFontSize(20, fs) }]}>{dateDisplay}</Text>
             {!isCurrentDay && <Text style={[s.todayLink, { fontSize: getFontSize(12, fs) }]}>今日に戻る</Text>}
           </TouchableOpacity>
-          <TouchableOpacity onPress={goToNextDay} style={s.navBtn}>
-            <Text style={s.navIcon}>›</Text>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={goToNextDay} style={s.navBtn}><Text style={s.navIcon}>›</Text></TouchableOpacity>
         </View>
-        {/* 日運サマリー */}
         <View style={s.dailyBox}>
           <View style={s.dailyHeader}>
             <Text style={[s.dailyTitle, { fontSize: getFontSize(14, fs) }]}>今日の運勢</Text>
@@ -133,26 +164,30 @@ export const FortuneScreen: React.FC = () => {
           </View>
           <Text style={[s.dailyAdvice, { fontSize: getFontSize(12, fs) }]}>{dailyAdvice}</Text>
         </View>
-        {/* キャラ＆風物詩 */}
         <View style={s.seasonBox}>
           <MyCharacter size={80} />
           <Image source={getSeasonImage(currentMonth)} style={s.seasonImg} resizeMode="contain" />
         </View>
         <ScrollView contentContainerStyle={s.content}>
-          {/* チャート */}
-          <View style={s.chartWrap}>
-            <HexChart scores={result.scores} size={200} />
-          </View>
-          {/* 総合運詳細 */}
+          <View style={s.chartWrap}><HexChart scores={result.scores} size={200} /></View>
           <View style={s.totalWrap}>
             <Text style={[s.totalLabel, { fontSize: getFontSize(12, fs) }]}>総合運</Text>
             <Text style={[s.totalDetail, { fontSize: getFontSize(14, fs) }]}>{result.details.total}</Text>
           </View>
-          {/* ラッキー情報 */}
-          <LuckyInfo lucky={result.lucky} fontSize={fs} />
-          {/* 詳細 */}
+          <LuckyInfo lucky={result.lucky} fontSize={fs} onAddLuckyTodo={addLuckyTodo} />
           <Text style={[s.sectionTitle, { fontSize: getFontSize(14, fs) }]}>詳細</Text>
           <FortuneDetailCards scores={result.scores} details={result.details} />
+          {/* 今日のやること（最下部） */}
+          {isCurrentDay && (
+            <DailyTodoList
+              todos={todos}
+              currentDate={todayStr}
+              fontSize={fs}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+              onAdd={(title) => addTodo(title, 'user')}
+            />
+          )}
         </ScrollView>
       </Animated.View>
     </View>

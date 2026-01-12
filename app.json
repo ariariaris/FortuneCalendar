@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.FortuneCalendar"
+      "bundleIdentifier": "com.anonymous.FortuneCalendar",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "天気予報の地域設定のため、現在地を取得します。"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +31,9 @@
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS",
         "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR"
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.anonymous.FortuneCalendar"
     },
@@ -44,6 +49,12 @@
       "expo-web-browser",
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "天気予報の地域設定のため、現在地を取得します。"
+        }
+      ],
+      [
         "expo-contacts",
         {
           "contactsPermission": "誕生日表示のため連絡先へのアクセスを許可してください。"
@@ -54,7 +65,8 @@
         {
           "calendarPermission": "カレンダーの予定を表示するために使用します。"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

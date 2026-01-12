@@ -1,173 +1,147 @@
-// Fortune Calendar 日付入力 v2.0 (年/月/日ボタン式)
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, StyleSheet, Dimensions } from 'react-native';
+// Fortune Calendar 日付入力 v3.0 (ネイティブDatePicker)
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface Props {
-  value: string;  // YYYY-MM-DD or YYYY/MM/DD
+  value: string;  // YYYY/MM/DD or YYYY-MM-DD
   onChange: (date: string) => void;
-  placeholder?: string;
-  style?: any;
-  format?: 'slash' | 'hyphen';  // 出力形式
+  label?: string;
+  format?: 'slash' | 'hyphen';
+  accentColor?: string;
 }
 
-export const DateInput: React.FC<Props> = ({ value, onChange, placeholder, style, format = 'slash' }) => {
-  const [showPicker, setShowPicker] = useState<'year' | 'month' | 'day' | null>(null);
+export const DateInput: React.FC<Props> = ({ value, onChange, label, format = 'slash', accentColor = '#FF69B4' }) => {
+  const [showPicker, setShowPicker] = useState(false);
 
-  // 入力値をパース
-  const parseDate = (v: string): { y: number; m: number; d: number } => {
-    if (!v) {
-      const now = new Date();
-      return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
-    }
+  // 文字列からDateオブジェクトに変換
+  const parseDate = (v: string): Date => {
+    if (!v) return new Date();
     const normalized = v.replace(/\//g, '-');
-    const [y, m, d] = normalized.split('-').map(Number);
-    return { y: y || new Date().getFullYear(), m: m || 1, d: d || 1 };
+    const date = new Date(normalized);
+    return isNaN(date.getTime()) ? new Date() : date;
   };
 
-  const { y, m, d } = parseDate(value);
+  const currentDate = parseDate(value);
 
-  // 出力形式に変換
-  const formatOutput = (year: number, month: number, day: number): string => {
+  // Dateオブジェクトを文字列に変換
+  const formatDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
     const sep = format === 'slash' ? '/' : '-';
-    return `${year}${sep}${String(month).padStart(2, '0')}${sep}${String(day).padStart(2, '0')}`;
+    return `${y}${sep}${m}${sep}${d}`;
   };
 
-  // 選択値リスト
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 50 }, (_, i) => currentYear - 10 + i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  const handleSelect = (v: number) => {
-    const newY = showPicker === 'year' ? v : y;
-    const newM = showPicker === 'month' ? v : m;
-    let newD = showPicker === 'day' ? v : d;
-    // 月変更時に日が範囲外なら調整
-    const maxDay = new Date(newY, newM, 0).getDate();
-    if (newD > maxDay) newD = maxDay;
-    onChange(formatOutput(newY, newM, newD));
-    setShowPicker(null);
+  // 表示用フォーマット
+  const displayDate = (): string => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth() + 1;
+    const d = currentDate.getDate();
+    return `${y}年${m}月${d}日`;
   };
 
-  const getPickerItems = () => {
-    if (showPicker === 'year') return years;
-    if (showPicker === 'month') return months;
-    if (showPicker === 'day') return days;
-    return [];
+  const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      onChange(formatDate(selectedDate));
+    }
+    if (event.type === 'dismissed') {
+      setShowPicker(false);
+    }
   };
 
-  const getLabel = (v: number) => {
-    if (showPicker === 'year') return `${v}年`;
-    if (showPicker === 'month') return `${v}月`;
-    return `${v}日`;
+  const handleConfirm = () => {
+    setShowPicker(false);
   };
 
   return (
-    <View style={[styles.container, style]}>
-      <TouchableOpacity style={styles.btn} onPress={() => setShowPicker('year')}>
-        <Text style={styles.btnText}>{y}年</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.btn} onPress={() => setShowPicker('month')}>
-        <Text style={styles.btnText}>{m}月</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.btn} onPress={() => setShowPicker('day')}>
-        <Text style={styles.btnText}>{d}日</Text>
+    <View style={styles.container}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <TouchableOpacity style={[styles.button, { borderColor: accentColor }]} onPress={() => setShowPicker(true)}>
+        <Text style={[styles.buttonText, { color: accentColor }]}>{displayDate()}</Text>
+        <Text style={styles.arrow}>▼</Text>
       </TouchableOpacity>
 
-      <Modal visible={showPicker !== null} transparent animationType="fade" onRequestClose={() => setShowPicker(null)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowPicker(null)}>
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerTitle}>
-              {showPicker === 'year' ? '年を選択' : showPicker === 'month' ? '月を選択' : '日を選択'}
-            </Text>
-            <ScrollView style={styles.pickerScroll} contentContainerStyle={styles.pickerContent}>
-              {getPickerItems().map((v) => (
-                <TouchableOpacity
-                  key={v}
-                  style={[styles.pickerItem, (showPicker === 'year' && v === y) || (showPicker === 'month' && v === m) || (showPicker === 'day' && v === d) ? styles.pickerItemActive : null]}
-                  onPress={() => handleSelect(v)}
-                >
-                  <Text style={[styles.pickerItemText, (showPicker === 'year' && v === y) || (showPicker === 'month' && v === m) || (showPicker === 'day' && v === d) ? styles.pickerItemTextActive : null]}>
-                    {getLabel(v)}
-                  </Text>
+      {Platform.OS === 'android' && showPicker && (
+        <DateTimePicker
+          value={currentDate}
+          mode="date"
+          display="default"
+          onChange={handleChange}
+          locale="ja-JP"
+        />
+      )}
+
+      {Platform.OS === 'ios' && (
+        <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.backdrop} onPress={() => setShowPicker(false)} />
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowPicker(false)}>
+                  <Text style={styles.cancelText}>キャンセル</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+                <Text style={styles.modalTitle}>日付を選択</Text>
+                <TouchableOpacity onPress={handleConfirm}>
+                  <Text style={[styles.doneText, { color: accentColor }]}>完了</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={currentDate}
+                mode="date"
+                display="spinner"
+                onChange={(e, d) => d && onChange(formatDate(d))}
+                locale="ja-JP"
+                style={styles.picker}
+              />
+            </View>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        </Modal>
+      )}
+
+      {Platform.OS === 'web' && showPicker && (
+        <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.backdrop} onPress={() => setShowPicker(false)} />
+            <View style={styles.webPickerContent}>
+              <Text style={styles.modalTitle}>日付を選択</Text>
+              <input
+                type="date"
+                value={value.replace(/\//g, '-')}
+                onChange={(e) => { onChange(e.target.value.replace(/-/g, format === 'slash' ? '/' : '-')); setShowPicker(false); }}
+                style={{ fontSize: 18, padding: 12, borderRadius: 8, border: '1px solid #ddd' }}
+              />
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowPicker(false)}>
+                <Text style={styles.closeBtnText}>閉じる</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  btn: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  btnText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    width: Dimensions.get('window').width * 0.8,
-    maxHeight: Dimensions.get('window').height * 0.6,
-    padding: 16,
-  },
-  pickerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 12,
-    color: '#333',
-  },
-  pickerScroll: {
-    maxHeight: 300,
-  },
-  pickerContent: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  pickerItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  pickerItemActive: {
-    backgroundColor: '#FF69B4',
-  },
-  pickerItemText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  pickerItemTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  container: { marginBottom: 12 },
+  label: { fontSize: 13, color: '#666', marginBottom: 6 },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff' },
+  buttonText: { fontSize: 16, fontWeight: '600' },
+  arrow: { fontSize: 12, color: '#999' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  modalTitle: { fontSize: 16, fontWeight: '600', color: '#333' },
+  cancelText: { fontSize: 16, color: '#666' },
+  doneText: { fontSize: 16, fontWeight: '600' },
+  picker: { height: 200 },
+  webPickerContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginHorizontal: 20, alignItems: 'center' },
+  closeBtn: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 24, backgroundColor: '#eee', borderRadius: 8 },
+  closeBtnText: { color: '#666', fontSize: 14 },
 });
 
 export default DateInput;

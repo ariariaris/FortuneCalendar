@@ -1,16 +1,16 @@
-// Fortune Calendar 設定画面 v2.7 (ネイティブカレンダー同期)
+// Fortune Calendar 設定画面 v2.9 (期間セレクター対応)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Switch, Platform } from 'react-native';
 import { PREFECTURES, getAreaName, getAreaCodeFromCoords, getCurrentPosition, getPrefectureByCode, Prefecture } from '../config/areaCode';
-import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { DevSettingsScreen } from './DevSettingsScreen';
 import { ExternalCalendarScreen } from './ExternalCalendarScreen';
 import { BirthdayListScreen } from './BirthdayListScreen';
 import { MandalaScreen } from './MandalaScreen';
 import { MyCharacter } from '../components/MyCharacter';
-import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS, FONT_SIZES } from '../config/defaultConfig';
-import { FontSize, DefaultTab } from '../config/types';
+import { GoalSettingsSection } from '../components/settings/GoalSettingsSection';
+import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS } from '../config/defaultConfig';
+import { DefaultTab } from '../config/types';
 import { getFontSize } from '../utils/fontUtils';
 import { requestCalendarPermission } from '../services/nativeCalendarService';
 
@@ -274,6 +274,21 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </View>
         </View>
+
+        <GoalSettingsSection
+          fontSize={fs}
+          themeColor={themeColor}
+          goalDeadlineDefault={userConfig.goalDeadlineDefault || 'yearEnd'}
+          showGoalsOnCalendar={userConfig.showGoalsOnCalendar ?? true}
+          dreamDefaultDuration={userConfig.dreamDefaultDuration || { value: 5, unit: 'year' }}
+          goalDefaultDuration={userConfig.goalDefaultDuration || { value: 3, unit: 'month' }}
+          mustdoDefaultDuration={userConfig.mustdoDefaultDuration || { value: 1, unit: 'week' }}
+          onGoalDeadlineDefaultChange={(v) => setUserConfig({ goalDeadlineDefault: v })}
+          onShowGoalsOnCalendarChange={(v) => setUserConfig({ showGoalsOnCalendar: v })}
+          onDreamDefaultDurationChange={(v) => setUserConfig({ dreamDefaultDuration: v })}
+          onGoalDefaultDurationChange={(v) => setUserConfig({ goalDefaultDuration: v })}
+          onMustdoDefaultDurationChange={(v) => setUserConfig({ mustdoDefaultDuration: v })}
+        />
 
         <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>連携</Text>
         <View style={s.card}>

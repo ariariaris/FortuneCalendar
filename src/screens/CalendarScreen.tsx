@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.6 (スケジュール欄アイコン削除)
+// Fortune Calendar カレンダー画面 v3.7 (目標管理設定連携)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -154,15 +154,20 @@ export const CalendarScreen: React.FC = () => {
     const items: ScheduleItem[] = [];
     const [, m, d] = localSelectedDate.split('-').map(Number);
 
-    // 夢（期限がこの日のもの）
-    dreams
-      .filter(dr => dr.deadline?.startsWith(localSelectedDate))
-      .forEach(dr => items.push({ type: 'external', icon: '🌟', title: `夢: ${dr.title}`, time: '終日', color: '#FFD700', sortKey: 0 }));
+    // 夢（期限がこの日のもの）- 設定で表示ON時のみ
+    if (userConfig.showGoalsOnCalendar !== false) {
+      dreams
+        .filter(dr => dr.deadline?.startsWith(localSelectedDate))
+        .forEach(dr => items.push({ type: 'external', icon: '⭐', title: `夢: ${dr.title}`, time: '終日', color: dr.color || '#FFD700', sortKey: 0 }));
 
-    // 目標（期限がこの日のもの）
-    goals
-      .filter(g => g.deadline?.startsWith(localSelectedDate) && g.status !== 'completed')
-      .forEach(g => items.push({ type: 'external', icon: '🏆', title: `目標: ${g.title}`, time: '終日', color: '#FF69B4', sortKey: 0 }));
+      // 目標（期限がこの日のもの）- 夢の色を継承
+      goals
+        .filter(g => g.deadline?.startsWith(localSelectedDate) && g.status !== 'completed')
+        .forEach(g => {
+          const parentDream = dreams.find(d => d.id === g.dreamId);
+          items.push({ type: 'external', icon: '📌', title: `目標: ${g.title}`, time: '終日', color: parentDream?.color || '#FF69B4', sortKey: 0 });
+        });
+    }
 
     // 外部カレンダーイベント
     externalEvents
@@ -240,16 +245,20 @@ export const CalendarScreen: React.FC = () => {
     goalTodos
       .filter(t => t.date === dateStr && !t.isCompleted)
       .forEach(t => titles.push({ title: t.title, color: '#2196F3' }));
-    // 夢
-    dreams
-      .filter(dr => dr.deadline?.startsWith(dateStr))
-      .forEach(dr => titles.push({ title: dr.title, color: '#FFD700' }));
-    // 目標
-    goals
-      .filter(g => g.deadline?.startsWith(dateStr) && g.status !== 'completed')
-      .forEach(g => titles.push({ title: g.title, color: '#FF69B4' }));
+    // 夢・目標（設定で表示ON時のみ）
+    if (userConfig.showGoalsOnCalendar !== false) {
+      dreams
+        .filter(dr => dr.deadline?.startsWith(dateStr))
+        .forEach(dr => titles.push({ title: `⭐${dr.title}`, color: dr.color || '#FFD700' }));
+      goals
+        .filter(g => g.deadline?.startsWith(dateStr) && g.status !== 'completed')
+        .forEach(g => {
+          const parentDream = dreams.find(d => d.id === g.dreamId);
+          titles.push({ title: g.title, color: parentDream?.color || '#FF69B4' });
+        });
+    }
     return titles;
-  }, [externalEvents, mandalaTodos, mustDoItems, goalTodos, dreams, goals]);
+  }, [externalEvents, mandalaTodos, mustDoItems, goalTodos, dreams, goals, userConfig.showGoalsOnCalendar]);
 
   // 有効な占いの平均スコア計算
   const enabledFortunes = userConfig.enabledFortunes || ['honDoubutsu'];

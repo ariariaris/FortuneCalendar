@@ -1,4 +1,4 @@
-// Fortune Calendar 目標管理サービス v1.0
+// Fortune Calendar 目標管理サービス v1.3 (リマインダー対応)
 import { Platform } from 'react-native';
 import { Dream, Purpose, Goal, MustDoItem, TodoItem, CalendarGoalItem } from '../types/goalManagement';
 
@@ -38,7 +38,9 @@ export const getDreams = async (): Promise<Dream[]> => {
   const rows = await db.getAllAsync<any>('SELECT * FROM dreams ORDER BY target_year');
   return rows.map((r: any) => ({
     id: r.id, title: r.title, description: r.description, targetYear: r.target_year,
-    category: r.category, imageUrl: r.image_url, createdAt: r.created_at, updatedAt: r.updated_at,
+    deadline: r.deadline, category: r.category, color: r.color, imageUrl: r.image_url,
+    reminders: r.reminders ? JSON.parse(r.reminders) : undefined,
+    createdAt: r.created_at, updatedAt: r.updated_at,
   }));
 };
 
@@ -52,8 +54,8 @@ export const saveDream = async (dream: Omit<Dream, 'id' | 'createdAt' | 'updated
   }
   if (!db) return newDream;
   await db.runAsync(
-    'INSERT INTO dreams (id, title, description, target_year, category, image_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [newDream.id, newDream.title, newDream.description, newDream.targetYear, newDream.category, newDream.imageUrl, newDream.createdAt, newDream.updatedAt]
+    'INSERT INTO dreams (id, title, description, target_year, deadline, category, color, image_url, reminders, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [newDream.id, newDream.title, newDream.description, newDream.targetYear, newDream.deadline, newDream.category, newDream.color, newDream.imageUrl, newDream.reminders ? JSON.stringify(newDream.reminders) : null, newDream.createdAt, newDream.updatedAt]
   );
   return newDream;
 };
@@ -66,7 +68,8 @@ export const updateDream = async (id: string, data: Partial<Dream>): Promise<voi
     return;
   }
   if (!db) return;
-  const updates = Object.entries(data).map(([k, v]) => `${k === 'targetYear' ? 'target_year' : k === 'imageUrl' ? 'image_url' : k} = ?`);
+  const fieldMap: Record<string, string> = { targetYear: 'target_year', imageUrl: 'image_url' };
+  const updates = Object.entries(data).map(([k]) => `${fieldMap[k] || k} = ?`);
   await db.runAsync(`UPDATE dreams SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`, [...Object.values(data), now(), id]);
 };
 
@@ -266,13 +269,14 @@ export const getTodoItems = async (date?: string): Promise<TodoItem[]> => {
   const query = date ? 'SELECT * FROM todo_items WHERE date = ? ORDER BY is_completed, created_at' : 'SELECT * FROM todo_items ORDER BY date, is_completed, created_at';
   const rows = await db.getAllAsync<any>(query, date ? [date] : []);
   return rows.map((r: any) => ({
-    id: r.id, mustDoId: r.must_do_id, title: r.title, date: r.date, isCompleted: r.is_completed === 1,
-    completedAt: r.completed_at, createdAt: r.created_at, updatedAt: r.updated_at,
+    id: r.id, mustDoId: r.must_do_id, title: r.title, date: r.date,
+    durationMinutes: r.duration_minutes ?? 60, reminders: r.reminders ? JSON.parse(r.reminders) : undefined,
+    isCompleted: r.is_completed === 1, completedAt: r.completed_at, createdAt: r.created_at, updatedAt: r.updated_at,
   }));
 };
 
 export const saveTodoItem = async (item: Omit<TodoItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<TodoItem> => {
-  const newItem: TodoItem = { ...item, id: generateId(), createdAt: now(), updatedAt: now() };
+  const newItem: TodoItem = { ...item, durationMinutes: item.durationMinutes ?? 60, id: generateId(), createdAt: now(), updatedAt: now() };
   if (Platform.OS === 'web') {
     const items = await getTodoItems();
     items.push(newItem);
@@ -281,8 +285,8 @@ export const saveTodoItem = async (item: Omit<TodoItem, 'id' | 'createdAt' | 'up
   }
   if (!db) return newItem;
   await db.runAsync(
-    'INSERT INTO todo_items (id, must_do_id, title, date, is_completed, completed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [newItem.id, newItem.mustDoId, newItem.title, newItem.date, newItem.isCompleted ? 1 : 0, newItem.completedAt, newItem.createdAt, newItem.updatedAt]
+    'INSERT INTO todo_items (id, must_do_id, title, date, duration_minutes, reminders, is_completed, completed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [newItem.id, newItem.mustDoId, newItem.title, newItem.date, newItem.durationMinutes, newItem.reminders ? JSON.stringify(newItem.reminders) : null, newItem.isCompleted ? 1 : 0, newItem.completedAt, newItem.createdAt, newItem.updatedAt]
   );
   return newItem;
 };
@@ -295,8 +299,8 @@ export const updateTodoItem = async (id: string, data: Partial<TodoItem>): Promi
     return;
   }
   if (!db) return;
-  await db.runAsync(`UPDATE todo_items SET title = COALESCE(?, title), is_completed = COALESCE(?, is_completed), completed_at = COALESCE(?, completed_at), updated_at = ? WHERE id = ?`,
-    [data.title, data.isCompleted !== undefined ? (data.isCompleted ? 1 : 0) : null, data.completedAt, now(), id]);
+  await db.runAsync(`UPDATE todo_items SET title = COALESCE(?, title), duration_minutes = COALESCE(?, duration_minutes), is_completed = COALESCE(?, is_completed), completed_at = COALESCE(?, completed_at), updated_at = ? WHERE id = ?`,
+    [data.title, data.durationMinutes, data.isCompleted !== undefined ? (data.isCompleted ? 1 : 0) : null, data.completedAt, now(), id]);
 };
 
 export const deleteTodoItem = async (id: string): Promise<void> => {

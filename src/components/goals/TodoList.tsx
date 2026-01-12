@@ -1,8 +1,10 @@
-// Fortune Calendar Todoリスト v1.0
+// Fortune Calendar Todoリスト v1.2 (リマインダー追加)
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { TodoItem } from '../../types/goalManagement';
 import { saveTodoItem, updateTodoItem, deleteTodoItem } from '../../services/goalService';
+import { TimeInput } from '../common/TimeInput';
+import { ReminderInput } from '../common/ReminderInput';
 
 interface Props {
   todoItems: TodoItem[];
@@ -25,10 +27,17 @@ const getDateLabel = (dateStr: string) => {
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 };
 
+const formatDuration = (minutes: number) => {
+  if (minutes >= 60 && minutes % 60 === 0) return `${minutes / 60}時間`;
+  return `${minutes}分`;
+};
+
 export const TodoList: React.FC<Props> = ({ todoItems, onRefresh }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(formatDate(new Date()));
+  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [reminders, setReminders] = useState<number[]>([]);
 
   const today = formatDate(new Date());
   const tomorrow = formatDate(new Date(Date.now() + 86400000));
@@ -36,11 +45,11 @@ export const TodoList: React.FC<Props> = ({ todoItems, onRefresh }) => {
   const tomorrowItems = todoItems.filter(i => i.date === tomorrow);
   const completedToday = todayItems.filter(i => i.isCompleted).length;
 
-  const resetForm = () => { setTitle(''); setDate(formatDate(new Date())); setIsAdding(false); };
+  const resetForm = () => { setTitle(''); setDate(formatDate(new Date())); setDurationMinutes(60); setReminders([]); setIsAdding(false); };
 
   const handleSave = async () => {
     if (!title.trim()) { Alert.alert('エラー', 'Todoを入力してください'); return; }
-    await saveTodoItem({ title: title.trim(), date, isCompleted: false });
+    await saveTodoItem({ title: title.trim(), date, durationMinutes, reminders: reminders.length > 0 ? reminders : undefined, isCompleted: false });
     resetForm(); onRefresh();
   };
 
@@ -66,6 +75,7 @@ export const TodoList: React.FC<Props> = ({ todoItems, onRefresh }) => {
           <TouchableOpacity key={item.id} onPress={() => handleToggle(item)} onLongPress={() => handleDelete(item.id)} style={styles.item}>
             <Text style={styles.checkbox}>{item.isCompleted ? '☑' : '□'}</Text>
             <Text style={[styles.itemTitle, item.isCompleted && styles.completed]}>{item.title}</Text>
+            {item.durationMinutes > 0 && <Text style={styles.duration}>{formatDuration(item.durationMinutes)}</Text>}
           </TouchableOpacity>
         ))
       )}
@@ -92,6 +102,8 @@ export const TodoList: React.FC<Props> = ({ todoItems, onRefresh }) => {
               <Text style={[styles.dateBtnText, date === tomorrow && styles.dateBtnTextActive]}>明日</Text>
             </TouchableOpacity>
           </View>
+          <TimeInput label="所要時間:" minutes={durationMinutes} onChange={setDurationMinutes} />
+          <ReminderInput label="リマインダー:" reminders={reminders} onChange={setReminders} unitType="short" />
           <View style={styles.formActions}>
             <TouchableOpacity onPress={resetForm} style={styles.cancelBtn}><Text style={styles.cancelBtnText}>キャンセル</Text></TouchableOpacity>
             <TouchableOpacity onPress={handleSave} style={styles.saveBtn}><Text style={styles.saveBtnText}>追加</Text></TouchableOpacity>
@@ -115,6 +127,7 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 6 },
   checkbox: { fontSize: 20, marginRight: 10, color: '#666' },
   itemTitle: { flex: 1, fontSize: 14, color: '#333' },
+  duration: { fontSize: 12, color: '#888', marginLeft: 8 },
   completed: { textDecorationLine: 'line-through', color: '#999' },
   progressInfo: { backgroundColor: '#e8f5e9', borderRadius: 8, padding: 10, marginBottom: 16, alignItems: 'center' },
   progressText: { fontSize: 14, color: '#4CAF50', fontWeight: '600' },

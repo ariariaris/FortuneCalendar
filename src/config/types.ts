@@ -1,6 +1,7 @@
-// Fortune Calendar 型定義 v1.2 (ネイティブカレンダー対応)
+// Fortune Calendar 型定義 v1.5 (期間入力統一)
 
 import { MandalaTimeframe } from '../types/mandala';
+import { GoalDeadlineDefault, DurationConfig } from '../types/goalManagement';
 
 /** 開発者設定 */
 export interface DevConfig {
@@ -94,6 +95,12 @@ export interface UserConfig {
   mandala: MandalaConfig;
   nativeCalendar: NativeCalendarConfig;  // Androidデバイスカレンダー同期
   showSplash: boolean;  // 起動スプラッシュ表示
+  // 目標管理設定
+  goalDeadlineDefault: GoalDeadlineDefault;  // 期限自動設定（本日/誕生日/年末）
+  showGoalsOnCalendar: boolean;  // カレンダーに夢/目標/やることを表示
+  dreamDefaultDuration: DurationConfig;   // 夢のデフォルト期間
+  goalDefaultDuration: DurationConfig;    // 目標のデフォルト期間
+  mustdoDefaultDuration: DurationConfig;  // やる事のデフォルト期間
 }
 
 /** ユーザープロフィール */

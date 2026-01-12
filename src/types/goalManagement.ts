@@ -1,7 +1,23 @@
-// Fortune Calendar 目標管理型定義 v1.0
+// Fortune Calendar 目標管理型定義 v1.5 (リマインダー追加)
 
-/** 時間軸 */
-export type GoalTimeframe = 'year' | '3year' | '5year' | '10year';
+/** 期間単位 */
+export type DurationUnit = 'year' | 'month' | 'week';
+
+/** 時間単位 */
+export type TimeUnit = 'hour' | 'minute';
+
+/** 期間設定（数値+単位） */
+export interface DurationConfig {
+  value: number;
+  unit: DurationUnit;
+}
+
+/** 期限自動設定タイプ */
+export type GoalDeadlineDefault = 'today' | 'birthday' | 'yearEnd';
+
+/** 旧型（互換性維持） */
+export type GoalTimeframe = 'year' | '1year' | '2year' | '3year' | '5year' | '10year';
+export type MustDoDefaultWeeks = 1 | 2 | 4;
 
 /** 目標ステータス */
 export type GoalStatus = 'not_started' | 'in_progress' | 'completed' | 'cancelled';
@@ -19,8 +35,10 @@ export interface Dream {
   description?: string;
   targetYear: number;
   deadline?: string;       // デフォルト: [targetYear]/[誕生月日]
-  category?: string;
+  category?: string;       // カテゴリー名（仕事、健康、趣味など）
+  color?: string;          // 表示色（#FF69B4など）
   imageUrl?: string;
+  reminders?: number[];    // リマインダー（分単位）最大3個
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +90,8 @@ export interface TodoItem {
   mustDoId?: string;
   title: string;
   date: string;
+  durationMinutes: number;  // 所要時間（分）デフォルト60
+  reminders?: number[];     // リマインダー（分単位）最大3個
   isCompleted: boolean;
   completedAt?: string;
   createdAt: string;

@@ -72,6 +72,12 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
     selectedCalendarIds: [],
   },
   showSplash: true,  // 起動スプラッシュ表示
+  // 目標管理設定
+  goalDeadlineDefault: 'yearEnd',  // デフォルト: 年末
+  showGoalsOnCalendar: true,  // カレンダーに夢/目標表示
+  dreamDefaultDuration: { value: 5, unit: 'year' },   // 夢: 5年後
+  goalDefaultDuration: { value: 3, unit: 'month' },   // 目標: 3ヶ月後
+  mustdoDefaultDuration: { value: 1, unit: 'week' },  // やる事: 1週間後
 };
 
 /** テーマカラー20色 */
@@ -129,4 +135,4 @@ export const FORTUNE_LIST = [
 ] as const;
 
 export const DEV_PASSCODE = '123456';
-export const APP_VERSION = '3.1.0a';
+export const APP_VERSION = '3.1.0j';

@@ -1,4 +1,4 @@
-// Fortune Calendar 目標ツリービュー v1.1 (日付順ソート)
+// Fortune Calendar 目標ツリービュー v1.3 (全項目タップ編集)
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem } from '../../types/goalManagement';
@@ -77,14 +77,11 @@ export const GoalTreeView: React.FC<Props> = ({
       <TouchableOpacity onPress={() => onToggleMustDo(item)} style={styles.checkbox}>
         <Text style={styles.checkboxText}>{item.status === 'completed' ? '☑' : '□'}</Text>
       </TouchableOpacity>
-      <View style={styles.itemContent}>
+      <TouchableOpacity style={styles.itemContent} onPress={() => onEditMustDo(item)}>
         <Text style={[styles.itemTitle, item.status === 'completed' && styles.completed]}>{item.title}</Text>
         <Text style={styles.deadline}>期限: {item.deadline}</Text>
-      </View>
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={() => onEditMustDo(item)}><Text style={styles.actionText}>編集</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => confirmDelete('やる事', item.id, onDeleteMustDo)}><Text style={styles.deleteText}>削除</Text></TouchableOpacity>
-      </View>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => confirmDelete('やる事', item.id, onDeleteMustDo)}><Text style={styles.deleteText}>削除</Text></TouchableOpacity>
     </View>
   );
 
@@ -97,13 +94,12 @@ export const GoalTreeView: React.FC<Props> = ({
           <TouchableOpacity onPress={() => toggleGoal(goal.id)} style={styles.expandBtn}>
             <Text style={styles.expandIcon}>{childItems.length > 0 ? (isExpanded ? '▼' : '▶') : '•'}</Text>
           </TouchableOpacity>
-          <View style={styles.itemContent}>
+          <TouchableOpacity style={styles.itemContent} onPress={() => onEditGoal(goal)}>
             <Text style={[styles.itemTitle, goal.status === 'completed' && styles.completed]}>📌 {goal.title}</Text>
             {goal.deadline && <Text style={styles.deadline}>期限: {goal.deadline.split('T')[0]}</Text>}
-          </View>
+          </TouchableOpacity>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => onAddMustDo(goal.id)}><Text style={styles.addText}>+やる事</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => onEditGoal(goal)}><Text style={styles.actionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => confirmDelete('目標', goal.id, onDeleteGoal)}><Text style={styles.deleteText}>削除</Text></TouchableOpacity>
           </View>
         </View>
@@ -115,19 +111,19 @@ export const GoalTreeView: React.FC<Props> = ({
   const renderDream = (dream: Dream) => {
     const isExpanded = expandedDreams.has(dream.id);
     const childGoals = getGoalsForDream(dream.id);
+    const colorStyle = dream.color ? { borderLeftColor: dream.color } : {};
     return (
       <View key={dream.id} style={styles.dreamContainer}>
-        <View style={[styles.item, styles.dreamItem]}>
+        <View style={[styles.item, styles.dreamItem, colorStyle]}>
           <TouchableOpacity onPress={() => toggleDream(dream.id)} style={styles.expandBtn}>
             <Text style={styles.expandIcon}>{childGoals.length > 0 ? (isExpanded ? '▼' : '▶') : '•'}</Text>
           </TouchableOpacity>
-          <View style={styles.itemContent}>
-            <Text style={styles.dreamTitle}>🌟 {dream.title}</Text>
-            <Text style={styles.deadline}>{dream.targetYear}年 ({dream.targetYear - new Date().getFullYear()}年後)</Text>
-          </View>
+          <TouchableOpacity style={styles.itemContent} onPress={() => onEditDream(dream)}>
+            <Text style={styles.dreamTitle}>{dream.color ? '⭐' : '🌟'} {dream.title}</Text>
+            <Text style={styles.deadline}>{dream.targetYear}年 ({dream.targetYear - new Date().getFullYear()}年後){dream.category ? ` [${dream.category}]` : ''}</Text>
+          </TouchableOpacity>
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => onAddGoal(dream.id)}><Text style={styles.addText}>+目標</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => onEditDream(dream)}><Text style={styles.actionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => confirmDelete('夢', dream.id, onDeleteDream)}><Text style={styles.deleteText}>削除</Text></TouchableOpacity>
           </View>
         </View>

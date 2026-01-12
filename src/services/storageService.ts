@@ -237,8 +237,11 @@ const createMMPTables = async (): Promise<void> => {
       title TEXT NOT NULL,
       description TEXT,
       target_year INTEGER NOT NULL,
+      deadline TEXT,
       category TEXT,
+      color TEXT,
       image_url TEXT,
+      reminders TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -294,6 +297,8 @@ const createMMPTables = async (): Promise<void> => {
       must_do_id TEXT,
       title TEXT NOT NULL,
       date TEXT NOT NULL,
+      duration_minutes INTEGER DEFAULT 60,
+      reminders TEXT,
       is_completed INTEGER DEFAULT 0,
       completed_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,

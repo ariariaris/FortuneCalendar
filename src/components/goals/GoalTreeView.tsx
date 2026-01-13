@@ -1,5 +1,5 @@
-// Fortune Calendar 目標ツリービュー v1.3 (全項目タップ編集)
-import React, { useState, useMemo } from 'react';
+// Fortune Calendar 目標ツリービュー v1.4 (初期展開)
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem } from '../../types/goalManagement';
 
@@ -34,6 +34,16 @@ export const GoalTreeView: React.FC<Props> = ({
 }) => {
   const [expandedDreams, setExpandedDreams] = useState<Set<string>>(new Set());
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+  const [initialized, setInitialized] = useState(false);
+
+  // 初回: 全ツリーを展開状態にする
+  useEffect(() => {
+    if (!initialized && dreams.length > 0) {
+      setExpandedDreams(new Set(dreams.map(d => d.id)));
+      setExpandedGoals(new Set(goals.map(g => g.id)));
+      setInitialized(true);
+    }
+  }, [dreams, goals, initialized]);
 
   // 日付順でソート（昇順：近い日付が上）
   const sortedDreams = useMemo(() => [...dreams].sort((a, b) => a.targetYear - b.targetYear), [dreams]);

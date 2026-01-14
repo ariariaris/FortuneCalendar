@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー画面 v3.7a (日付形式正規化対応)
+// Fortune Calendar カレンダー画面 v3.7b (年タブから月遷移対応)
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, PanResponder, Animated, Dimensions, Modal, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -130,7 +130,15 @@ export const CalendarScreen: React.FC = () => {
 
   useFocusEffect(useCallback(() => {
     loadScheduleData();
-  }, [loadScheduleData]));
+    // selectedDateが設定されていれば、その月を表示
+    if (selectedDate) {
+      const [y, m] = selectedDate.split('-').map(Number);
+      if (y && m) {
+        setViewDate(new Date(y, m - 1, 1));
+        setLocalSelectedDate(selectedDate);
+      }
+    }
+  }, [loadScheduleData, selectedDate]));
 
   // プルダウン更新
   const onRefresh = useCallback(async () => {

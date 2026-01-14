@@ -1,4 +1,4 @@
-// Fortune Calendar 年間カレンダー v1.9 (文字サイズ対応)
+// Fortune Calendar 年間カレンダー v2.0 (月→月タブ、日→日タブ遷移)
 import React, { useMemo, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, PanResponder, Animated, Dimensions, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -105,8 +105,15 @@ export const YearCalendarScreen: React.FC = () => {
     return result;
   }, [viewYear, enabledFortunes, profile, bestCount]);
 
+  // 日タップ → 日タブへ遷移
   const handleDayPress = (month: number, day: number) => {
     setSelectedDate(formatDate(new Date(viewYear, month, day)));
+    navigation.navigate('Day');
+  };
+
+  // 月タップ → 月タブ（カレンダー）へ遷移
+  const handleMonthPress = (month: number) => {
+    setSelectedDate(formatDate(new Date(viewYear, month, 1)));
     navigation.navigate('Calendar');
   };
 
@@ -126,7 +133,9 @@ export const YearCalendarScreen: React.FC = () => {
     }
     return (
       <View key={month} style={s.monthBox}>
-        <Text style={s.monthTitle}>{month + 1}月</Text>
+        <TouchableOpacity onPress={() => handleMonthPress(month)} style={s.monthTitleBtn} activeOpacity={0.6}>
+          <Text style={s.monthTitle}>{month + 1}月</Text>
+        </TouchableOpacity>
         <View style={s.weekRow}>{WEEKDAYS.map((w, i) => <Text key={i} style={[s.weekDay, i === 0 && s.sun, i === 6 && s.sat]}>{w}</Text>)}</View>
         <View style={s.daysGrid}>{cells}</View>
       </View>
@@ -207,7 +216,8 @@ const s = StyleSheet.create({
   yearText: { fontSize: 20, fontWeight: '600', color: '#1C1C1E' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
   monthBox: { width: '33%', padding: 4, marginBottom: 8 },
-  monthTitle: { fontSize: 14, fontWeight: '600', color: '#333', textAlign: 'center', marginBottom: 4 },
+  monthTitleBtn: { backgroundColor: '#FFF5F8', borderRadius: 6, paddingVertical: 4, marginBottom: 4 },
+  monthTitle: { fontSize: 14, fontWeight: '600', color: '#FF69B4', textAlign: 'center' },
   weekRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 2 },
   weekDay: { fontSize: 8, color: '#999', width: 14, textAlign: 'center' },
   sun: { color: '#FF3B30' },

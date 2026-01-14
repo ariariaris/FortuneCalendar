@@ -1,4 +1,4 @@
-// Fortune Calendar カレンダー統合表示 v1.2 (ユーザー誕生日対応)
+// Fortune Calendar カレンダー統合表示 v1.2a (日付形式正規化対応)
 import { ExternalCalendarEvent } from '../types/externalCalendar';
 import { BirthdayEntry } from '../types/birthday';
 import { MandalaTodo } from '../types/mandala';
@@ -139,12 +139,12 @@ export const getDateIcons = (
 
   const hasExternal = externalEvents.some((e) => e.startTime.split('T')[0] === date);
   const hasBirthday = birthdayNames.length > 0;
-  const hasMandala = mandalaTodos.some((t) => t.deadline && t.deadline.startsWith(date) && !t.isCompleted);
+  const hasMandala = mandalaTodos.some((t) => t.deadline && t.deadline.replace(/\//g, '-').startsWith(date) && !t.isCompleted);
 
-  // 目標管理アイテム
-  const hasDream = dreams?.some((dr) => dr.deadline?.startsWith(date)) ?? false;
-  const hasGoal = goals?.some((g) => g.deadline?.startsWith(date) && g.status !== 'completed') ?? false;
-  const hasMustDo = mustDoItems?.some((mi) => mi.deadline === date && mi.status !== 'completed') ?? false;
+  // 目標管理アイテム（日付形式を正規化して比較）
+  const hasDream = dreams?.some((dr) => dr.deadline?.replace(/\//g, '-').startsWith(date)) ?? false;
+  const hasGoal = goals?.some((g) => g.deadline?.replace(/\//g, '-').startsWith(date) && g.status !== 'completed') ?? false;
+  const hasMustDo = mustDoItems?.some((mi) => mi.deadline?.replace(/\//g, '-') === date && mi.status !== 'completed') ?? false;
   const hasTodo = todoItems?.some((t) => t.date === date && !t.isCompleted) ?? false;
 
   return { hasExternal, hasBirthday, hasMandala, hasDream, hasGoal, hasMustDo, hasTodo, birthdayNames };

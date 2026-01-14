@@ -1,4 +1,4 @@
-// Fortune Calendar 夢への第一歩 v2.9 (Todoタブ非表示)
+// Fortune Calendar 夢への第一歩 v2.9a (日付形式をYYYY-MM-DDに統一)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem, TodoItem, MustDoPriority, GoalDeadlineDefault, DurationConfig, DurationUnit } from '../types/goalManagement';
@@ -17,7 +17,7 @@ import { THEME_COLORS } from '../config/defaultConfig';
 type TabType = 'tree' | 'todo';
 type ModalType = 'dream' | 'goal' | 'mustdo' | null;
 
-// DurationConfigから期限を算出
+// DurationConfigから期限を算出（YYYY-MM-DD形式）
 const getDeadlineFromDuration = (dur: DurationConfig, deadlineType: GoalDeadlineDefault, birthDate?: string): string => {
   const now = new Date();
   let targetDate = new Date(now);
@@ -32,12 +32,12 @@ const getDeadlineFromDuration = (dur: DurationConfig, deadlineType: GoalDeadline
 
   const targetYear = targetDate.getFullYear();
   if (deadlineType === 'today') {
-    return `${targetYear}/${String(targetDate.getMonth() + 1).padStart(2, '0')}/${String(targetDate.getDate()).padStart(2, '0')}`;
+    return `${targetYear}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
   } else if (deadlineType === 'birthday' && birthDate) {
     const parts = birthDate.split('-');
-    if (parts.length >= 3) return `${targetYear}/${parts[1]}/${parts[2]}`;
+    if (parts.length >= 3) return `${targetYear}-${parts[1]}-${parts[2]}`;
   }
-  return `${targetYear}/12/31`;
+  return `${targetYear}-12-31`;
 };
 
 // Todoタブは将来別の場所に移設予定のため非表示
@@ -112,7 +112,7 @@ export const GoalManagementScreen: React.FC = () => {
       setEditId(dream.id); setFormTitle(dream.title);
       const yearDiff = dream.targetYear - new Date().getFullYear();
       setFormDuration({ value: Math.max(1, yearDiff), unit: 'year' });
-      setFormDeadline(dream.deadline || `${dream.targetYear}/12/31`);
+      setFormDeadline((dream.deadline || `${dream.targetYear}-12-31`).replace(/\//g, '-'));
       setFormCategory(dream.category || ''); setFormColor(dream.color || '#FF69B4');
       setFormReminders(dream.reminders || []);
     } else {
@@ -141,7 +141,7 @@ export const GoalManagementScreen: React.FC = () => {
   // 目標
   const openGoalModal = (dreamId?: string, goal?: Goal) => {
     if (goal) {
-      setEditId(goal.id); setFormTitle(goal.title); setFormDeadline(goal.deadline || ''); setParentId(goal.dreamId);
+      setEditId(goal.id); setFormTitle(goal.title); setFormDeadline(goal.deadline?.replace(/\//g, '-') || ''); setParentId(goal.dreamId);
       // timeframeから推測
       const tf = goal.timeframe;
       if (tf === 'year') setFormDuration({ value: 0, unit: 'year' });
@@ -173,7 +173,7 @@ export const GoalManagementScreen: React.FC = () => {
   // やる事
   const openMustDoModal = (goalId?: string, item?: MustDoItem) => {
     if (item) {
-      setEditId(item.id); setFormTitle(item.title); setFormDeadline(item.deadline); setFormPriority(item.priority); setParentId(item.goalId);
+      setEditId(item.id); setFormTitle(item.title); setFormDeadline(item.deadline?.replace(/\//g, '-') || ''); setFormPriority(item.priority); setParentId(item.goalId);
     } else {
       setParentId(goalId); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
     }
@@ -253,7 +253,7 @@ export const GoalManagementScreen: React.FC = () => {
             <DurationInput label="期間" value={formDuration} onChange={handleDurationChange} accentColor={accentColor} />
 
             <Text style={styles.label}>期限（直接入力）</Text>
-            <DateInput value={formDeadline} onChange={setFormDeadline} />
+            <DateInput value={formDeadline} onChange={setFormDeadline} format="hyphen" />
 
             {modalType === 'dream' && (
               <TouchableOpacity onPress={saveDreamAndAddGoal} style={styles.addChildBtn}>

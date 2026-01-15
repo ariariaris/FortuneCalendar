@@ -1,4 +1,4 @@
-// Fortune Calendar ネイティブカレンダーサービス v3.1 (タイムゾーン修正)
+// Fortune Calendar ネイティブカレンダーサービス v3.2 (カレンダー作成機能追加)
 // Android/iOSシステムカレンダーの読み書き
 import { Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
@@ -327,4 +327,45 @@ export const getNativeCalendarEvent = async (eventId: string): Promise<Calendar.
     console.error('イベント取得エラー:', error);
     return null;
   }
+};
+
+// =====================
+// カレンダー作成
+// =====================
+
+/** 新規カレンダー作成 */
+export const createNativeCalendar = async (title: string, color?: string): Promise<string | null> => {
+  if (Platform.OS === 'web') return null;
+
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') return null;
+
+    const defaultCalendarSource = Platform.OS === 'ios'
+      ? await getDefaultCalendarSource()
+      : { isLocalAccount: true, name: 'FortuneCalendar', type: Calendar.SourceType.LOCAL };
+
+    const calendarId = await Calendar.createCalendarAsync({
+      title,
+      color: color || '#FF69B4',
+      entityType: Calendar.EntityTypes.EVENT,
+      sourceId: defaultCalendarSource?.id,
+      source: defaultCalendarSource,
+      name: title,
+      ownerAccount: 'FortuneCalendar',
+      accessLevel: Calendar.CalendarAccessLevel.OWNER,
+    });
+
+    return calendarId;
+  } catch (error) {
+    console.error('カレンダー作成エラー:', error);
+    return null;
+  }
+};
+
+/** iOSデフォルトカレンダーソース取得 */
+const getDefaultCalendarSource = async (): Promise<Calendar.Source | undefined> => {
+  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  const defaultCalendar = calendars.find(c => c.isPrimary) || calendars.find(c => c.allowsModifications);
+  return defaultCalendar?.source;
 };

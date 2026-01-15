@@ -1,4 +1,4 @@
-// Fortune Calendar 夢への第一歩 v2.9b (入力例プレースホルダー追加)
+// Fortune Calendar 夢への第一歩 v3.0a (入力例を実テキスト表示)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem, TodoItem, MustDoPriority, GoalDeadlineDefault, DurationConfig, DurationUnit } from '../types/goalManagement';
@@ -10,12 +10,20 @@ import { TodoList } from '../components/goals/TodoList';
 import { DateInput } from '../components/DateInput';
 import { DurationInput } from '../components/common/DurationInput';
 import { ReminderInput } from '../components/common/ReminderInput';
+import { CalendarPicker } from '../components/common/CalendarPicker';
 import { useAppStore } from '../store/useAppStore';
 import { getFontSize } from '../utils/fontUtils';
 import { THEME_COLORS } from '../config/defaultConfig';
 
 type TabType = 'tree' | 'todo';
 type ModalType = 'dream' | 'goal' | 'mustdo' | null;
+
+// 入力例（新規追加時に表示、編集開始でクリア）
+const EXAMPLE_TEXT = {
+  dream: 'マイホーム',
+  goal: 'エリアを決める',
+  mustdo: '都内23区の住居エリア情報を収集する',
+};
 
 // DurationConfigから期限を算出（YYYY-MM-DD形式）
 const getDeadlineFromDuration = (dur: DurationConfig, deadlineType: GoalDeadlineDefault, birthDate?: string): string => {
@@ -68,7 +76,7 @@ export const GoalManagementScreen: React.FC = () => {
   const [formDeadline, setFormDeadline] = useState('');
   const [formDuration, setFormDuration] = useState<DurationConfig>(defaultDreamDur);
   const [formPriority, setFormPriority] = useState<MustDoPriority>('medium');
-  const [formCategory, setFormCategory] = useState('');
+  const [formCalendarId, setFormCalendarId] = useState<string | undefined>();
   const [formColor, setFormColor] = useState('#FF69B4');
   const [formReminders, setFormReminders] = useState<number[]>([]);
 
@@ -86,7 +94,7 @@ export const GoalManagementScreen: React.FC = () => {
 
   const resetForm = () => {
     setFormTitle(''); setFormDeadline(''); setFormDuration(defaultDreamDur);
-    setFormPriority('medium'); setFormCategory(''); setFormColor('#FF69B4');
+    setFormPriority('medium'); setFormCalendarId(undefined); setFormColor('#FF69B4');
     setFormReminders([]); setEditId(null); setParentId(undefined); setModalType(null);
   };
 
@@ -113,29 +121,30 @@ export const GoalManagementScreen: React.FC = () => {
       const yearDiff = dream.targetYear - new Date().getFullYear();
       setFormDuration({ value: Math.max(1, yearDiff), unit: 'year' });
       setFormDeadline((dream.deadline || `${dream.targetYear}-12-31`).replace(/\//g, '-'));
-      setFormCategory(dream.category || ''); setFormColor(dream.color || '#FF69B4');
+      setFormCalendarId(dream.calendarId); setFormColor(dream.color || '#FF69B4');
       setFormReminders(dream.reminders || []);
     } else {
+      setFormTitle(EXAMPLE_TEXT.dream);
       setFormDuration(defaultDreamDur); setFormDeadline(getDeadlineFromDuration(defaultDreamDur, deadlineType, birthDate));
-      setFormCategory(''); setFormColor('#FF69B4'); setFormReminders([]);
+      setFormCalendarId(undefined); setFormColor('#FF69B4'); setFormReminders([]);
     }
     setModalType('dream');
   };
 
   const saveDreamHandler = async () => {
-    if (!formTitle.trim()) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, category: formCategory || undefined, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
+    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.dream) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
+    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: formCalendarId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
     if (editId) { await updateDream(editId, data); } else { await saveDream(data); }
     resetForm(); loadData();
   };
 
   const saveDreamAndAddGoal = async () => {
-    if (!formTitle.trim()) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, category: formCategory || undefined, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
+    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.dream) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
+    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: formCalendarId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
     let dreamId = editId;
     if (editId) { await updateDream(editId, data); } else { const newDream = await saveDream(data); dreamId = newDream?.id; }
-    setFormTitle(''); setFormDuration(defaultGoalDur); setFormDeadline(getDeadlineFromDuration(defaultGoalDur, deadlineType, birthDate));
-    setEditId(null); setParentId(dreamId || undefined); setFormCategory(''); setFormColor('#FF69B4'); setFormReminders([]); setModalType('goal');
+    setFormTitle(EXAMPLE_TEXT.goal); setFormDuration(defaultGoalDur); setFormDeadline(getDeadlineFromDuration(defaultGoalDur, deadlineType, birthDate));
+    setEditId(null); setParentId(dreamId || undefined); setFormCalendarId(undefined); setFormColor('#FF69B4'); setFormReminders([]); setModalType('goal');
   };
 
   // 目標
@@ -147,13 +156,14 @@ export const GoalManagementScreen: React.FC = () => {
       if (tf === 'year') setFormDuration({ value: 0, unit: 'year' });
       else setFormDuration({ value: parseInt(tf) || 1, unit: 'year' });
     } else {
+      setFormTitle(EXAMPLE_TEXT.goal);
       setParentId(dreamId); setFormDuration(defaultGoalDur); setFormDeadline(getDeadlineFromDuration(defaultGoalDur, deadlineType, birthDate));
     }
     setModalType('goal');
   };
 
   const saveGoalHandler = async () => {
-    if (!formTitle.trim()) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
+    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.goal) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
     const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
     const data = { title: formTitle.trim(), timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
     if (editId) { await updateGoal(editId, data); } else { await saveGoal(data); }
@@ -161,12 +171,12 @@ export const GoalManagementScreen: React.FC = () => {
   };
 
   const saveGoalAndAddMustDo = async () => {
-    if (!formTitle.trim()) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
+    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.goal) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
     const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
     const data = { title: formTitle.trim(), timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
     let goalId = editId;
     if (editId) { await updateGoal(editId, data); } else { const newGoal = await saveGoal(data); goalId = newGoal?.id; }
-    setFormTitle(''); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
+    setFormTitle(EXAMPLE_TEXT.mustdo); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
     setFormPriority('medium'); setEditId(null); setParentId(goalId || undefined); setModalType('mustdo');
   };
 
@@ -175,13 +185,14 @@ export const GoalManagementScreen: React.FC = () => {
     if (item) {
       setEditId(item.id); setFormTitle(item.title); setFormDeadline(item.deadline?.replace(/\//g, '-') || ''); setFormPriority(item.priority); setParentId(item.goalId);
     } else {
+      setFormTitle(EXAMPLE_TEXT.mustdo);
       setParentId(goalId); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
     }
     setModalType('mustdo');
   };
 
   const saveMustDoHandler = async () => {
-    if (!formTitle.trim()) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
+    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.mustdo) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
     const data = { title: formTitle.trim(), deadline: formDeadline, priority: formPriority, timeframe: 'week' as const, status: 'pending' as const, goalId: parentId };
     if (editId) { await updateMustDoItem(editId, data); } else { await saveMustDoItem(data); }
     resetForm(); loadData();
@@ -212,6 +223,11 @@ export const GoalManagementScreen: React.FC = () => {
   };
 
   const accentColor = modalType === 'dream' ? '#FFD700' : modalType === 'goal' ? '#FF69B4' : '#FF9800';
+  const isExampleText = modalType && formTitle === EXAMPLE_TEXT[modalType];
+
+  const handleTitleFocus = () => {
+    if (isExampleText) setFormTitle('');
+  };
 
   const renderModal = () => (
     <Modal visible={modalType !== null} transparent animationType="fade" onRequestClose={resetForm}>
@@ -220,11 +236,11 @@ export const GoalManagementScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.modalScroll}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{modalType === 'dream' ? '夢' : modalType === 'goal' ? '目標' : 'やる事'}を{editId ? '編集' : '追加'}</Text>
-            <TextInput style={styles.input} placeholder={modalType === 'dream' ? '例: マイホーム' : modalType === 'goal' ? '例: エリアを決める' : '例: 都内23区の住居エリア情報を収集する'} value={formTitle} onChangeText={setFormTitle} />
+            <TextInput style={[styles.input, isExampleText && styles.exampleText]} value={formTitle} onChangeText={setFormTitle} onFocus={handleTitleFocus} />
 
             {modalType === 'dream' && (
               <>
-                <TextInput style={styles.input} placeholder="カテゴリー（仕事、健康、趣味など）" value={formCategory} onChangeText={setFormCategory} />
+                <CalendarPicker selectedCalendarId={formCalendarId} onSelect={(id) => setFormCalendarId(id)} accentColor="#FFD700" />
                 <Text style={styles.label}>色</Text>
                 <View style={styles.colorRow}>
                   {THEME_COLORS.slice(0, 10).map(c => (
@@ -315,6 +331,7 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '90%', maxWidth: 400 },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16, textAlign: 'center' },
   input: { backgroundColor: '#f5f5f5', borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 15 },
+  exampleText: { color: '#999' },
   label: { fontSize: 13, color: '#666', marginBottom: 6 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   colorRow: { flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' },

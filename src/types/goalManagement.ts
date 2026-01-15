@@ -35,7 +35,8 @@ export interface Dream {
   description?: string;
   targetYear: number;
   deadline?: string;       // デフォルト: [targetYear]/[誕生月日]
-  category?: string;       // カテゴリー名（仕事、健康、趣味など）
+  category?: string;       // カテゴリー名（旧：仕事、健康、趣味など）→ 廃止予定
+  calendarId?: string;     // ネイティブカレンダーID
   color?: string;          // 表示色（#FF69B4など）
   imageUrl?: string;
   reminders?: number[];    // リマインダー（分単位）最大3個

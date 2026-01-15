@@ -1,4 +1,4 @@
-// Fortune Calendar 夢への第一歩 v2.9a (日付形式をYYYY-MM-DDに統一)
+// Fortune Calendar 夢への第一歩 v2.9b (入力例プレースホルダー追加)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem, TodoItem, MustDoPriority, GoalDeadlineDefault, DurationConfig, DurationUnit } from '../types/goalManagement';
@@ -220,7 +220,7 @@ export const GoalManagementScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.modalScroll}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{modalType === 'dream' ? '夢' : modalType === 'goal' ? '目標' : 'やる事'}を{editId ? '編集' : '追加'}</Text>
-            <TextInput style={styles.input} placeholder="タイトル" value={formTitle} onChangeText={setFormTitle} />
+            <TextInput style={styles.input} placeholder={modalType === 'dream' ? '例: マイホーム' : modalType === 'goal' ? '例: エリアを決める' : '例: 都内23区の住居エリア情報を収集する'} value={formTitle} onChangeText={setFormTitle} />
 
             {modalType === 'dream' && (
               <>

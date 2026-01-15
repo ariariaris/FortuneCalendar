@@ -135,4 +135,4 @@ export const FORTUNE_LIST = [
 ] as const;
 
 export const DEV_PASSCODE = '123456';
-export const APP_VERSION = '3.1.0q';
+export const APP_VERSION = '3.1.0s';

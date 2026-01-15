@@ -1,4 +1,4 @@
-// Fortune Calendar 目標ツリービュー v1.4 (初期展開)
+// Fortune Calendar 目標ツリービュー v1.5 (夢追加ボタンのみ表示)
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Dream, Goal, MustDoItem } from '../../types/goalManagement';
@@ -167,12 +167,6 @@ export const GoalTreeView: React.FC<Props> = ({
       <View style={styles.addButtons}>
         <TouchableOpacity onPress={onAddDream} style={[styles.addBtn, { backgroundColor: '#FFD700' }]}>
           <Text style={styles.addBtnText}>+ 夢を追加</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onAddGoal()} style={[styles.addBtn, { backgroundColor: '#FF69B4' }]}>
-          <Text style={styles.addBtnText}>+ 目標を追加</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onAddMustDo()} style={[styles.addBtn, { backgroundColor: '#FF9800' }]}>
-          <Text style={styles.addBtnText}>+ やる事を追加</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

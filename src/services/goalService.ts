@@ -1,6 +1,7 @@
-// Fortune Calendar 目標管理サービス v1.3 (リマインダー対応)
+// Fortune Calendar 目標管理サービス v1.4 (カレンダー連動削除)
 import { Platform } from 'react-native';
 import { Dream, Purpose, Goal, MustDoItem, TodoItem, CalendarGoalItem } from '../types/goalManagement';
+import { deleteNativeCalendar } from './nativeCalendarService';
 
 let db: any = null;
 const WEB_KEYS = {
@@ -39,7 +40,7 @@ export const getDreams = async (): Promise<Dream[]> => {
   return rows.map((r: any) => ({
     id: r.id, title: r.title, description: r.description, targetYear: r.target_year,
     deadline: r.deadline, category: r.category, color: r.color, imageUrl: r.image_url,
-    reminders: r.reminders ? JSON.parse(r.reminders) : undefined,
+    reminders: r.reminders ? JSON.parse(r.reminders) : undefined, calendarId: r.calendar_id,
     createdAt: r.created_at, updatedAt: r.updated_at,
   }));
 };
@@ -54,8 +55,8 @@ export const saveDream = async (dream: Omit<Dream, 'id' | 'createdAt' | 'updated
   }
   if (!db) return newDream;
   await db.runAsync(
-    'INSERT INTO dreams (id, title, description, target_year, deadline, category, color, image_url, reminders, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [newDream.id, newDream.title, newDream.description, newDream.targetYear, newDream.deadline, newDream.category, newDream.color, newDream.imageUrl, newDream.reminders ? JSON.stringify(newDream.reminders) : null, newDream.createdAt, newDream.updatedAt]
+    'INSERT INTO dreams (id, title, description, target_year, deadline, category, color, image_url, reminders, calendar_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [newDream.id, newDream.title, newDream.description, newDream.targetYear, newDream.deadline, newDream.category, newDream.color, newDream.imageUrl, newDream.reminders ? JSON.stringify(newDream.reminders) : null, newDream.calendarId, newDream.createdAt, newDream.updatedAt]
   );
   return newDream;
 };
@@ -68,15 +69,19 @@ export const updateDream = async (id: string, data: Partial<Dream>): Promise<voi
     return;
   }
   if (!db) return;
-  const fieldMap: Record<string, string> = { targetYear: 'target_year', imageUrl: 'image_url' };
+  const fieldMap: Record<string, string> = { targetYear: 'target_year', imageUrl: 'image_url', calendarId: 'calendar_id' };
   const updates = Object.entries(data).map(([k]) => `${fieldMap[k] || k} = ?`);
   await db.runAsync(`UPDATE dreams SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`, [...Object.values(data), now(), id]);
 };
 
 export const deleteDream = async (id: string): Promise<void> => {
+  // カレンダーも削除
+  const dreams = await getDreams();
+  const dream = dreams.find(d => d.id === id);
+  if (dream?.calendarId) { await deleteNativeCalendar(dream.calendarId); }
+
   if (Platform.OS === 'web') {
-    const dreams = (await getDreams()).filter(d => d.id !== id);
-    localStorage.setItem(WEB_KEYS.dreams, JSON.stringify(dreams));
+    localStorage.setItem(WEB_KEYS.dreams, JSON.stringify(dreams.filter(d => d.id !== id)));
     return;
   }
   if (!db) return;

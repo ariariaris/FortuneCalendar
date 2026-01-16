@@ -50,6 +50,7 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   },
   yearCalendarBestCount: 3,
   showAge: true,
+  showRokuyo: true,
   defaultTab: 'Calendar',  // 起動時デフォルト: 月タブ
   // MMP拡張設定
   externalCalendar: {

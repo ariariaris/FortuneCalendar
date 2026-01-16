@@ -42,7 +42,7 @@ export type FontSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
 /** 起動時デフォルトタブ */
-export type DefaultTab = 'Day' | 'Calendar' | 'Year';
+export type DefaultTab = 'Day' | 'Calendar' | 'Year' | 'Goals' | 'Settings';
 
 /** 外部カレンダー設定 */
 export interface ExternalCalendarConfig {
@@ -88,6 +88,7 @@ export interface UserConfig {
   weatherConfig: WeatherConfig;
   yearCalendarBestCount: number;  // 年間カレンダーの★表示数(1-5)
   showAge: boolean;  // 年齢を表示
+  showRokuyo: boolean;  // 六曜を表示
   defaultTab: DefaultTab;  // 起動時デフォルトタブ
   // MMP拡張設定
   externalCalendar: ExternalCalendarConfig;

@@ -1,4 +1,4 @@
-// Fortune Calendar ネイティブカレンダーサービス v3.2 (カレンダー作成機能追加)
+// Fortune Calendar ネイティブカレンダーサービス v3.3 (カレンダー削除機能追加)
 // Android/iOSシステムカレンダーの読み書き
 import { Platform } from 'react-native';
 import * as Calendar from 'expo-calendar';
@@ -368,4 +368,24 @@ const getDefaultCalendarSource = async (): Promise<Calendar.Source | undefined> 
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
   const defaultCalendar = calendars.find(c => c.isPrimary) || calendars.find(c => c.allowsModifications);
   return defaultCalendar?.source;
+};
+
+/** カレンダー削除（関連イベントも全削除） */
+export const deleteNativeCalendar = async (calendarId: string): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+  try {
+    const status = await checkCalendarPermission();
+    if (status !== 'granted') return false;
+    await Calendar.deleteCalendarAsync(calendarId);
+    return true;
+  } catch (error) {
+    console.error('カレンダー削除エラー:', error);
+    return false;
+  }
+};
+
+/** 夢用カレンダー作成（FortuneCalendar - {夢の名前}） */
+export const createDreamCalendar = async (dreamTitle: string, color?: string): Promise<string | null> => {
+  const calendarTitle = `FortuneCalendar - ${dreamTitle}`;
+  return createNativeCalendar(calendarTitle, color);
 };

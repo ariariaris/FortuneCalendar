@@ -1,4 +1,4 @@
-// Fortune Calendar 期間入力コンポーネント v3.0 (1-10ボタン+その他入力)
+// Fortune Calendar 期間入力コンポーネント v3.2.0e (数値ラベル削除)
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput } from 'react-native';
 import { DurationConfig, DurationUnit } from '../../types/goalManagement';
@@ -91,7 +91,6 @@ export const DurationInput: React.FC<Props> = ({ label, value, onChange, accentC
           <Text style={styles.title}>期間を選択</Text>
 
           {/* 数値選択: 1-10 + その他 */}
-          <Text style={styles.sectionLabel}>数値</Text>
           <View style={styles.numberRow}>
             {numberButtons.map(num => (
               <TouchableOpacity

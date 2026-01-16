@@ -1,4 +1,4 @@
-// Fortune Calendar ストレージサービス v1.1 (MMP拡張対応)
+// Fortune Calendar ストレージサービス v1.2 (dreamsマイグレーション対応)
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FortuneResult } from '../config/types';
@@ -308,6 +308,27 @@ const createMMPTables = async (): Promise<void> => {
     CREATE INDEX IF NOT EXISTS idx_todo_date ON todo_items(date);
     CREATE INDEX IF NOT EXISTS idx_todo_completed ON todo_items(is_completed);
   `);
+  // マイグレーション: 既存テーブルにカラム追加
+  await runMigrations();
+};
+
+/** マイグレーション: 既存テーブルへのカラム追加 */
+const runMigrations = async (): Promise<void> => {
+  if (!db) return;
+  const migrations = [
+    'ALTER TABLE dreams ADD COLUMN description TEXT',
+    'ALTER TABLE dreams ADD COLUMN deadline TEXT',
+    'ALTER TABLE dreams ADD COLUMN category TEXT',
+    'ALTER TABLE dreams ADD COLUMN color TEXT',
+    'ALTER TABLE dreams ADD COLUMN image_url TEXT',
+    'ALTER TABLE dreams ADD COLUMN reminders TEXT',
+    'ALTER TABLE dreams ADD COLUMN calendar_id TEXT',
+    'ALTER TABLE goals ADD COLUMN calendar_id TEXT',
+    'ALTER TABLE must_do_items ADD COLUMN calendar_id TEXT',
+  ];
+  for (const sql of migrations) {
+    try { await db.runAsync(sql); } catch { /* カラムが既に存在する場合は無視 */ }
+  }
 };
 
 // =====================
@@ -467,5 +488,94 @@ export const clearBirthdayEntries = async (): Promise<void> => {
     await db.runAsync('DELETE FROM birthday_entries');
   } catch (error) {
     console.error('Clear birthday error:', error);
+  }
+};
+
+// =====================
+// 外部カレンダーアカウント
+// =====================
+
+const ACCOUNTS_CACHE_KEY = '@external_accounts';
+
+/** アカウント保存 */
+export const saveCalendarAccount = async (account: ExternalCalendarAccount): Promise<void> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(ACCOUNTS_CACHE_KEY);
+      const accounts: ExternalCalendarAccount[] = data ? JSON.parse(data) : [];
+      const idx = accounts.findIndex((a) => a.id === account.id);
+      if (idx >= 0) {
+        accounts[idx] = account;
+      } else {
+        accounts.push(account);
+      }
+      localStorage.setItem(ACCOUNTS_CACHE_KEY, JSON.stringify(accounts));
+    } catch (error) {
+      console.error('Save account error:', error);
+    }
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO external_calendar_accounts
+       (id, provider, email, display_name, access_token_encrypted, refresh_token_encrypted, expires_at, connected_at, last_sync_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [account.id, account.provider, account.email, account.displayName, account.accessToken, account.refreshToken, account.expiresAt, account.connectedAt, account.lastSyncAt]
+    );
+  } catch (error) {
+    console.error('Save account error:', error);
+  }
+};
+
+/** アカウント一覧取得 */
+export const getCalendarAccounts = async (): Promise<ExternalCalendarAccount[]> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(ACCOUNTS_CACHE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  if (!db) return [];
+  try {
+    const rows = await db.getAllAsync<any>('SELECT * FROM external_calendar_accounts ORDER BY connected_at DESC');
+    return rows.map((r: any) => ({
+      id: r.id,
+      provider: r.provider,
+      email: r.email,
+      displayName: r.display_name,
+      accessToken: r.access_token_encrypted,
+      refreshToken: r.refresh_token_encrypted,
+      expiresAt: r.expires_at,
+      connectedAt: r.connected_at,
+      lastSyncAt: r.last_sync_at,
+    }));
+  } catch {
+    return [];
+  }
+};
+
+/** アカウント削除 */
+export const deleteCalendarAccount = async (accountId: string): Promise<void> => {
+  if (Platform.OS === 'web') {
+    try {
+      const data = localStorage.getItem(ACCOUNTS_CACHE_KEY);
+      if (data) {
+        const accounts: ExternalCalendarAccount[] = JSON.parse(data);
+        const filtered = accounts.filter((a) => a.id !== accountId);
+        localStorage.setItem(ACCOUNTS_CACHE_KEY, JSON.stringify(filtered));
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+    }
+    return;
+  }
+  if (!db) return;
+  try {
+    await db.runAsync('DELETE FROM external_calendar_accounts WHERE id = ?', [accountId]);
+  } catch (error) {
+    console.error('Delete account error:', error);
   }
 };

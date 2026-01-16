@@ -6,7 +6,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { CalendarDay } from '../components/CalendarDay';
 import { getAllPlugins } from '../fortunes';
-import { formatDate, getDaysInMonth, getFirstDayOfMonth, isToday as checkIsToday } from '../utils/dateUtils';
+import { formatDate, getDaysInMonth, getFirstDayOfMonth, isToday as checkIsToday, getRokuyo } from '../utils/dateUtils';
 import { MyCharacter } from '../components/MyCharacter';
 import { getSeasonImage } from '../utils/seasonImages';
 import { fetchWeather, DayWeather, getWeatherForDate } from '../services/weatherService';
@@ -62,7 +62,8 @@ export const CalendarScreen: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i); // ±10年
 
-  // スワイプアニメーション
+  // refs
+  const scrollRef = useRef<ScrollView>(null);
   const viewDateRef = useRef(viewDate);
   viewDateRef.current = viewDate;
   const translateX = useRef(new Animated.Value(0)).current;
@@ -311,6 +312,7 @@ export const CalendarScreen: React.FC = () => {
   const handleDayPress = (day: number, m?: number, y?: number) => {
     const date = formatDate(new Date(y ?? year, m ?? month, day));
     setLocalSelectedDate(date);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const goToDay = () => {
@@ -356,6 +358,7 @@ export const CalendarScreen: React.FC = () => {
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames}
           eventTitles={getEventTitlesForDate(dateStr)}
+          rokuyo={(userConfig.showRokuyo ?? true) ? getRokuyo(d) : undefined}
           onPress={() => handleDayPress(dayNum, m, y)} onLongPress={() => handleDayLongPress(dayNum, m, y)} isWeekView />
       );
     }
@@ -392,6 +395,7 @@ export const CalendarScreen: React.FC = () => {
           weather={dayWeather} showWeatherIcon={wc.showIcon} showWeatherTemp={wc.showTemp} showWeatherRain={wc.showRain}
           hasBirthday={icons.hasBirthday} birthdayNames={icons.birthdayNames}
           eventTitles={getEventTitlesForDate(dateStr)}
+          rokuyo={(userConfig.showRokuyo ?? true) ? getRokuyo(date) : undefined}
           onPress={() => handleDayPress(d)} onLongPress={() => handleDayLongPress(d)} />
       );
       if (week.length === 7) { weeks.push(<View key={`w${weeks.length}`} style={s.week}>{week}</View>); week = []; }
@@ -446,7 +450,7 @@ export const CalendarScreen: React.FC = () => {
           <Text style={[s.monthlyAdvice, { fontSize: getFontSize(12, fs) }]}>{monthlyAdvice}</Text>
         </View>
       )}
-      <ScrollView style={s.scrollContainer} showsVerticalScrollIndicator={false}
+      <ScrollView ref={scrollRef} style={s.scrollContainer} showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColor} colors={[themeColor]} />}>
         {/* キャラ＆風物詩 */}
         <View style={s.seasonBox}>

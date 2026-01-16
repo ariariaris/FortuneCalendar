@@ -38,6 +38,8 @@ interface Props {
   // 誕生日
   hasBirthday?: boolean;
   birthdayNames?: string[];
+  // 六曜
+  rokuyo?: string;
 }
 
 const getColorfulStars = (score: number): { count: number; color: string } => {
@@ -56,7 +58,7 @@ const getSimpleStars = (score: number): { count: number; color: string } => {
 export const CalendarDay: React.FC<Props> = ({
   day, dayOfWeek, isToday, isSelected, score, colorful, weather,
   showWeatherIcon = true, showWeatherTemp = true, showWeatherRain = true,
-  onPress, onLongPress, isWeekView, eventTitles, hasBirthday, birthdayNames,
+  onPress, onLongPress, isWeekView, eventTitles, hasBirthday, birthdayNames, rokuyo,
 }) => {
   if (day === 0) return <View style={s.cell} />;
 
@@ -82,8 +84,10 @@ export const CalendarDay: React.FC<Props> = ({
         <View style={[s.dayWrap, isToday && s.today, isSelected && !isToday && s.selected]}>
           <Text style={[s.dayText, { color: isToday || isSelected ? '#fff' : textColor, fontSize: 12 * SCALE * weekScale }]}>{day}</Text>
         </View>
-        {stars && <Text style={[s.stars, { color: stars.color, fontSize: 7 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
+        {stars && <Text style={[s.stars, { color: stars.color, fontSize: 5 * SCALE * weekScale }]}>{'★'.repeat(stars.count)}</Text>}
       </View>
+      {/* 六曜 */}
+      {rokuyo && <Text style={s.rokuyoText}>{rokuyo}</Text>}
 
       {/* 天気 */}
       {showWeatherIcon && weather?.icon && (
@@ -132,7 +136,8 @@ const s = StyleSheet.create({
   today: { backgroundColor: '#FF2D55' },
   selected: { backgroundColor: '#007AFF' },
   dayText: { fontSize: 12 * SCALE, fontWeight: '500' },
-  stars: { fontSize: 6 * SCALE, letterSpacing: -1 },
+  stars: { fontSize: 5 * SCALE, letterSpacing: -1 },
+  rokuyoText: { fontSize: 8, color: '#888', textAlign: 'center', marginBottom: 1 },
   weatherRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 2 },
   temp: { color: '#FF6B6B', fontWeight: '600' },
   rain: { color: '#4A90D9' },

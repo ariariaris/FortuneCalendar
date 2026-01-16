@@ -10,7 +10,7 @@ import {
   fetchGoogleCalendarEvents,
   handleCalendarError,
 } from '../services/externalCalendarService';
-import { saveExternalEvents, deleteExternalEventsByAccount } from '../services/storageService';
+import { saveExternalEvents, deleteExternalEventsByAccount, saveCalendarAccount, getCalendarAccounts, deleteCalendarAccount } from '../services/storageService';
 
 interface Props {
   onClose?: () => void;
@@ -29,8 +29,8 @@ export const ExternalCalendarScreen: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   const loadAccounts = async () => {
-    // TODO: DBからアカウント一覧を読み込む
-    // 現時点ではローカルステートのみ
+    const savedAccounts = await getCalendarAccounts();
+    setAccounts(savedAccounts);
   };
 
   const handleConnectGoogle = async () => {
@@ -38,6 +38,7 @@ export const ExternalCalendarScreen: React.FC<Props> = ({ onClose }) => {
     try {
       const account = await startGoogleAuth();
       if (account) {
+        await saveCalendarAccount(account);
         setAccounts((prev) => [...prev, account]);
         Alert.alert('成功', 'Google Calendarと連携しました');
         syncEvents(account.id);
@@ -61,6 +62,7 @@ export const ExternalCalendarScreen: React.FC<Props> = ({ onClose }) => {
           onPress: async () => {
             await disconnectAccount(accountId);
             await deleteExternalEventsByAccount(accountId);
+            await deleteCalendarAccount(accountId);
             setAccounts((prev) => prev.filter((a) => a.id !== accountId));
           },
         },

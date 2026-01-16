@@ -74,6 +74,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ loading: true });
     await Promise.all([configManager.init(), initDatabase()]);
     const userConfig = configManager.getUserConfig();
+    // マイグレーション: 'Dream' → 'Goals'
+    if ((userConfig.defaultTab as string) === 'Dream') {
+      userConfig.defaultTab = 'Goals';
+      await configManager.setUserConfig(userConfig);
+    }
     set({
       userConfig,
       selectedFortune: userConfig.selectedFortune,

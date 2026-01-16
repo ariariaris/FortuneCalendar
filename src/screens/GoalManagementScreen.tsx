@@ -1,6 +1,7 @@
-// Fortune Calendar 夢への第一歩 v3.0a (入力例を実テキスト表示)
+// Fortune Calendar 夢への第一歩 v3.2.0g (夢専用カレンダー自動作成)
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Modal, TextInput, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dream, Goal, MustDoItem, TodoItem, MustDoPriority, GoalDeadlineDefault, DurationConfig, DurationUnit } from '../types/goalManagement';
 import { getDreams, getGoals, getMustDoItems, getTodoItems, initGoalService,
   saveDream, updateDream, deleteDream, saveGoal, updateGoal, deleteGoal,
@@ -10,10 +11,11 @@ import { TodoList } from '../components/goals/TodoList';
 import { DateInput } from '../components/DateInput';
 import { DurationInput } from '../components/common/DurationInput';
 import { ReminderInput } from '../components/common/ReminderInput';
-import { CalendarPicker } from '../components/common/CalendarPicker';
 import { useAppStore } from '../store/useAppStore';
 import { getFontSize } from '../utils/fontUtils';
 import { THEME_COLORS } from '../config/defaultConfig';
+import { tapFeedback, actionFeedback, successFeedback, errorFeedback } from '../utils/haptics';
+import { createDreamCalendar } from '../services/nativeCalendarService';
 
 type TabType = 'tree' | 'todo';
 type ModalType = 'dream' | 'goal' | 'mustdo' | null;
@@ -54,6 +56,7 @@ const TABS: { key: TabType; label: string; color: string }[] = [
 ];
 
 export const GoalManagementScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { userConfig } = useAppStore();
   const fs = userConfig.fontSize || 'md';
   const deadlineType = userConfig.goalDeadlineDefault || 'yearEnd';
@@ -79,6 +82,7 @@ export const GoalManagementScreen: React.FC = () => {
   const [formCalendarId, setFormCalendarId] = useState<string | undefined>();
   const [formColor, setFormColor] = useState('#FF69B4');
   const [formReminders, setFormReminders] = useState<number[]>([]);
+  const [userHasEdited, setUserHasEdited] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -93,9 +97,12 @@ export const GoalManagementScreen: React.FC = () => {
   useEffect(() => { loadData(); }, [loadData]);
 
   const resetForm = () => {
+    tapFeedback();
     setFormTitle(''); setFormDeadline(''); setFormDuration(defaultDreamDur);
     setFormPriority('medium'); setFormCalendarId(undefined); setFormColor('#FF69B4');
     setFormReminders([]); setEditId(null); setParentId(undefined); setModalType(null);
+    setUserHasEdited(false);
+    loadData(); // 閉じる時にデータ再読み込み
   };
 
   const handleDurationChange = (dur: DurationConfig) => {
@@ -131,20 +138,41 @@ export const GoalManagementScreen: React.FC = () => {
     setModalType('dream');
   };
 
+  const getDefaultTitle = (type: 'dream' | 'goal' | 'mustdo') => {
+    const prefix = type === 'dream' ? '無題の夢' : type === 'goal' ? '無題の目標' : '無題のやる事';
+    const count = type === 'dream' ? dreams.length + 1 : type === 'goal' ? goals.length + 1 : mustDoItems.length + 1;
+    return `${prefix}${count}`;
+  };
+
   const saveDreamHandler = async () => {
-    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.dream) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: formCalendarId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
-    if (editId) { await updateDream(editId, data); } else { await saveDream(data); }
-    resetForm(); loadData();
+    actionFeedback();
+    let title = formTitle.trim();
+    if (!title || (!userHasEdited && formTitle === EXAMPLE_TEXT.dream)) { title = getDefaultTitle('dream'); }
+    try {
+      let calId: string | undefined;
+      try { if (!editId) { calId = await createDreamCalendar(title, formColor) || undefined; } }
+      catch (calErr) { console.log('カレンダー作成スキップ:', calErr); }
+      const data = { title, targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: calId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
+      if (editId) { await updateDream(editId, data); } else { await saveDream(data); }
+      successFeedback(); resetForm();
+    } catch (e) { Alert.alert('保存エラー', String(e)); }
   };
 
   const saveDreamAndAddGoal = async () => {
-    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.dream) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const data = { title: formTitle.trim(), targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: formCalendarId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
-    let dreamId = editId;
-    if (editId) { await updateDream(editId, data); } else { const newDream = await saveDream(data); dreamId = newDream?.id; }
-    setFormTitle(EXAMPLE_TEXT.goal); setFormDuration(defaultGoalDur); setFormDeadline(getDeadlineFromDuration(defaultGoalDur, deadlineType, birthDate));
-    setEditId(null); setParentId(dreamId || undefined); setFormCalendarId(undefined); setFormColor('#FF69B4'); setFormReminders([]); setModalType('goal');
+    actionFeedback();
+    let title = formTitle.trim();
+    if (!title || (!userHasEdited && formTitle === EXAMPLE_TEXT.dream)) { title = getDefaultTitle('dream'); }
+    try {
+      let calId: string | undefined;
+      try { if (!editId) { calId = await createDreamCalendar(title, formColor) || undefined; } }
+      catch (calErr) { console.log('カレンダー作成スキップ:', calErr); }
+      const data = { title, targetYear: getTargetYear(formDuration), deadline: formDeadline || undefined, calendarId: calId, color: formColor, reminders: formReminders.length > 0 ? formReminders : undefined };
+      let dreamId = editId;
+      if (editId) { await updateDream(editId, data); } else { const newDream = await saveDream(data); dreamId = newDream?.id; }
+      successFeedback();
+      setFormTitle(EXAMPLE_TEXT.goal); setFormDuration(defaultGoalDur); setFormDeadline(getDeadlineFromDuration(defaultGoalDur, deadlineType, birthDate));
+      setEditId(null); setParentId(dreamId || undefined); setFormCalendarId(calId); setFormColor('#FF69B4'); setFormReminders([]); setUserHasEdited(false); setModalType('goal');
+    } catch (e) { Alert.alert('保存エラー', String(e)); }
   };
 
   // 目標
@@ -163,21 +191,30 @@ export const GoalManagementScreen: React.FC = () => {
   };
 
   const saveGoalHandler = async () => {
-    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.goal) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
-    const data = { title: formTitle.trim(), timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
-    if (editId) { await updateGoal(editId, data); } else { await saveGoal(data); }
-    resetForm(); loadData();
+    actionFeedback();
+    let title = formTitle.trim();
+    if (!title || (!userHasEdited && formTitle === EXAMPLE_TEXT.goal)) { title = getDefaultTitle('goal'); }
+    try {
+      const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
+      const data = { title, timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
+      if (editId) { await updateGoal(editId, data); } else { await saveGoal(data); }
+      successFeedback(); resetForm();
+    } catch (e) { Alert.alert('保存エラー', String(e)); }
   };
 
   const saveGoalAndAddMustDo = async () => {
-    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.goal) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
-    const data = { title: formTitle.trim(), timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
-    let goalId = editId;
-    if (editId) { await updateGoal(editId, data); } else { const newGoal = await saveGoal(data); goalId = newGoal?.id; }
-    setFormTitle(EXAMPLE_TEXT.mustdo); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
-    setFormPriority('medium'); setEditId(null); setParentId(goalId || undefined); setModalType('mustdo');
+    actionFeedback();
+    let title = formTitle.trim();
+    if (!title || (!userHasEdited && formTitle === EXAMPLE_TEXT.goal)) { title = getDefaultTitle('goal'); }
+    try {
+      const tf = formDuration.unit === 'year' ? (formDuration.value === 0 ? 'year' : `${formDuration.value}year`) : 'year';
+      const data = { title, timeframe: tf as any, deadline: formDeadline || undefined, dreamId: parentId, progress: 0, status: 'not_started' as const };
+      let goalId = editId;
+      if (editId) { await updateGoal(editId, data); } else { const newGoal = await saveGoal(data); goalId = newGoal?.id; }
+      successFeedback();
+      setFormTitle(EXAMPLE_TEXT.mustdo); setFormDuration(defaultMustdoDur); setFormDeadline(getDeadlineFromDuration(defaultMustdoDur, deadlineType, birthDate));
+      setFormPriority('medium'); setEditId(null); setParentId(goalId || undefined); setUserHasEdited(false); setModalType('mustdo');
+    } catch (e) { Alert.alert('保存エラー', String(e)); }
   };
 
   // やる事
@@ -192,10 +229,14 @@ export const GoalManagementScreen: React.FC = () => {
   };
 
   const saveMustDoHandler = async () => {
-    if (!formTitle.trim() || formTitle === EXAMPLE_TEXT.mustdo) { Alert.alert('エラー', 'タイトルを入力してください'); return; }
-    const data = { title: formTitle.trim(), deadline: formDeadline, priority: formPriority, timeframe: 'week' as const, status: 'pending' as const, goalId: parentId };
-    if (editId) { await updateMustDoItem(editId, data); } else { await saveMustDoItem(data); }
-    resetForm(); loadData();
+    actionFeedback();
+    let title = formTitle.trim();
+    if (!title || (!userHasEdited && formTitle === EXAMPLE_TEXT.mustdo)) { title = getDefaultTitle('mustdo'); }
+    try {
+      const data = { title, deadline: formDeadline, priority: formPriority, timeframe: 'week' as const, status: 'pending' as const, goalId: parentId };
+      if (editId) { await updateMustDoItem(editId, data); } else { await saveMustDoItem(data); }
+      successFeedback(); resetForm();
+    } catch (e) { Alert.alert('保存エラー', String(e)); }
   };
 
   const handleDeleteDream = async (id: string) => { await deleteDream(id); loadData(); };
@@ -226,30 +267,34 @@ export const GoalManagementScreen: React.FC = () => {
   const isExampleText = modalType && formTitle === EXAMPLE_TEXT[modalType];
 
   const handleTitleFocus = () => {
-    if (isExampleText) setFormTitle('');
+    if (isExampleText && !userHasEdited) setFormTitle('');
+  };
+
+  const handleTitleChange = (text: string) => {
+    setFormTitle(text);
+    setUserHasEdited(true);
   };
 
   const renderModal = () => (
     <Modal visible={modalType !== null} transparent animationType="fade" onRequestClose={resetForm}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={resetForm} />
-        <ScrollView contentContainerStyle={styles.modalScroll}>
+        <View style={styles.backdrop} />
+        <ScrollView contentContainerStyle={[styles.modalScroll, { paddingTop: insets.top + 20 }]}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{modalType === 'dream' ? '夢' : modalType === 'goal' ? '目標' : 'やる事'}を{editId ? '編集' : '追加'}</Text>
-            <TextInput style={[styles.input, isExampleText && styles.exampleText]} value={formTitle} onChangeText={setFormTitle} onFocus={handleTitleFocus} />
+            <TextInput style={[styles.input, isExampleText && !userHasEdited && styles.exampleText]} value={formTitle} onChangeText={handleTitleChange} onFocus={handleTitleFocus} placeholder={modalType ? EXAMPLE_TEXT[modalType] : ''} />
 
             {modalType === 'dream' && (
               <>
-                <CalendarPicker selectedCalendarId={formCalendarId} onSelect={(id) => setFormCalendarId(id)} accentColor="#FFD700" />
                 <Text style={styles.label}>色</Text>
                 <View style={styles.colorRow}>
                   {THEME_COLORS.slice(0, 10).map(c => (
-                    <TouchableOpacity key={c.id} style={[styles.colorChip, { backgroundColor: c.color }, formColor === c.color && styles.colorChipActive]} onPress={() => setFormColor(c.color)} />
+                    <TouchableOpacity key={c.id} style={[styles.colorChip, { backgroundColor: c.color }, formColor === c.color && styles.colorChipActive]} onPress={() => { tapFeedback(); setFormColor(c.color); }} />
                   ))}
                 </View>
                 <View style={styles.colorRow}>
                   {THEME_COLORS.slice(10, 20).map(c => (
-                    <TouchableOpacity key={c.id} style={[styles.colorChip, { backgroundColor: c.color }, formColor === c.color && styles.colorChipActive]} onPress={() => setFormColor(c.color)} />
+                    <TouchableOpacity key={c.id} style={[styles.colorChip, { backgroundColor: c.color }, formColor === c.color && styles.colorChipActive]} onPress={() => { tapFeedback(); setFormColor(c.color); }} />
                   ))}
                 </View>
                 <ReminderInput label="リマインダー:" reminders={formReminders} onChange={setFormReminders} unitType="long" accentColor="#FFD700" />
@@ -259,7 +304,7 @@ export const GoalManagementScreen: React.FC = () => {
             {modalType === 'mustdo' && (
               <View style={styles.row}>
                 {(['high', 'medium', 'low'] as MustDoPriority[]).map(p => (
-                  <TouchableOpacity key={p} style={[styles.chip, { borderColor: p === 'high' ? '#f44336' : p === 'medium' ? '#ff9800' : '#4CAF50' }, formPriority === p && { backgroundColor: p === 'high' ? '#f44336' : p === 'medium' ? '#ff9800' : '#4CAF50' }]} onPress={() => setFormPriority(p)}>
+                  <TouchableOpacity key={p} style={[styles.chip, { borderColor: p === 'high' ? '#f44336' : p === 'medium' ? '#ff9800' : '#4CAF50' }, formPriority === p && { backgroundColor: p === 'high' ? '#f44336' : p === 'medium' ? '#ff9800' : '#4CAF50' }]} onPress={() => { tapFeedback(); setFormPriority(p); }}>
                     <Text style={[styles.chipText, formPriority === p && styles.chipTextActive]}>{p === 'high' ? '高' : p === 'medium' ? '中' : '低'}</Text>
                   </TouchableOpacity>
                 ))}

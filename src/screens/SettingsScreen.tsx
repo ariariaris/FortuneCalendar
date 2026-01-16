@@ -7,6 +7,7 @@ import { DevSettingsScreen } from './DevSettingsScreen';
 import { ExternalCalendarScreen } from './ExternalCalendarScreen';
 import { BirthdayListScreen } from './BirthdayListScreen';
 import { MandalaScreen } from './MandalaScreen';
+import { CalendarManagementScreen } from './CalendarManagementScreen';
 import { MyCharacter } from '../components/MyCharacter';
 import { GoalSettingsSection } from '../components/settings/GoalSettingsSection';
 import { DEV_PASSCODE, APP_VERSION, FORTUNE_LIST, THEME_COLORS } from '../config/defaultConfig';
@@ -18,6 +19,8 @@ const TAB_OPTIONS: { key: DefaultTab; label: string }[] = [
   { key: 'Day', label: '日' },
   { key: 'Calendar', label: '月' },
   { key: 'Year', label: '年' },
+  { key: 'Goals', label: '夢' },
+  { key: 'Settings', label: '設定' },
 ];
 
 export const SettingsScreen: React.FC = () => {
@@ -28,6 +31,7 @@ export const SettingsScreen: React.FC = () => {
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showCalendarSettings, setShowCalendarSettings] = useState(false);
+  const [showCalendarManagement, setShowCalendarManagement] = useState(false);
   const [showBirthdaySettings, setShowBirthdaySettings] = useState(false);
   const [showMandalaSettings, setShowMandalaSettings] = useState(false);
   const [showPrefPicker, setShowPrefPicker] = useState(false);
@@ -264,6 +268,10 @@ export const SettingsScreen: React.FC = () => {
             <Switch value={userConfig.showAge ?? true} onValueChange={(v) => setUserConfig({ showAge: v })} />
           </View>
           <View style={s.row}>
+            <Text style={s.label}>六曜を表示</Text>
+            <Switch value={userConfig.showRokuyo ?? true} onValueChange={(v) => setUserConfig({ showRokuyo: v })} />
+          </View>
+          <View style={s.row}>
             <Text style={s.label}>★表示数/月</Text>
             <View style={s.btnGroup}>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -312,6 +320,12 @@ export const SettingsScreen: React.FC = () => {
             <Text style={s.label}>🎂 誕生日表示</Text>
             <Text style={s.linkArrow}>›</Text>
           </TouchableOpacity>
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity style={s.linkRow} onPress={() => setShowCalendarManagement(true)}>
+              <Text style={s.label}>🗂️ カレンダー管理</Text>
+              <Text style={s.linkArrow}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={[s.section, { fontSize: getFontSize(14, fs) }]}>占い</Text>
@@ -374,6 +388,7 @@ export const SettingsScreen: React.FC = () => {
       <Modal visible={showCalendarSettings} animationType="slide">
         <ExternalCalendarScreen onClose={() => setShowCalendarSettings(false)} />
       </Modal>
+      <CalendarManagementScreen visible={showCalendarManagement} onClose={() => setShowCalendarManagement(false)} />
       <Modal visible={showBirthdaySettings} animationType="slide">
         <BirthdayListScreen onClose={() => setShowBirthdaySettings(false)} />
       </Modal>

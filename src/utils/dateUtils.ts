@@ -76,3 +76,23 @@ export const isSameDate = (a: Date, b: Date): boolean => {
 export const isToday = (date: Date): boolean => {
   return formatDate(date) === today();
 };
+
+/** 六曜名 */
+export const ROKUYO_NAMES = ['大安', '赤口', '先勝', '友引', '先負', '仏滅'];
+
+/** 六曜計算（旧暦近似） */
+export const getRokuyo = (date: Date): string => {
+  // 旧暦を近似計算（Zeller's congruence風の簡易アルゴリズム）
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  // 旧暦月日の近似（新月周期29.5日を使用）
+  const jd = Math.floor(367 * y - Math.floor(7 * (y + Math.floor((m + 9) / 12)) / 4) + Math.floor(275 * m / 9) + d + 1721013.5);
+  const lunarCycle = 29.530588853;
+  const refNewMoon = 2451550.1; // 2000/1/6 18:14 UTC の新月（ユリウス日）
+  const daysSinceNewMoon = (jd - refNewMoon) % lunarCycle;
+  const lunarDay = Math.floor(daysSinceNewMoon) + 1;
+  const lunarMonth = Math.floor((jd - refNewMoon) / lunarCycle) % 12 + 1;
+  const rokuyoIndex = (lunarMonth + lunarDay) % 6;
+  return ROKUYO_NAMES[rokuyoIndex];
+};
